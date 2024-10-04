@@ -39,11 +39,11 @@ def update_daily_series_from_cmc():
     c.execute('SELECT MAX(date) FROM prices')
     last_update = c.fetchone()[0] + 'T23:59:00'
 
-    url = "https://pro-api.coingecko.com/api/v3/coins/bitcoin/market_chart/range"
+    url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart/range"
 
     headers = {
         "accept": "application/json",
-        "x-cg-pro-api-key": "CG-TNyscaEqG3PAFAvz6ZF6BKqU"
+        "x-cg-demo-api-key": "CG-Zbrb3pwc8k5L1e26J2vKjGUD"
     }
     params = {'from': datetime.fromisoformat(last_update).timestamp(), 'vs_currency': 'usd', 'to': datetime.now().timestamp()}
     response = requests.get(url, params=params, headers=headers)
