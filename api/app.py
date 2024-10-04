@@ -1,35 +1,49 @@
-import sqlite3
+import psycopg2
 import requests
+import os
 from datetime import date
 from flask import Flask, jsonify, request
 from db_util import init_db, save_price_to_db
 from stats import compute_stats
+import dotenv
+
 
 app = Flask(__name__)
 
-DB_NAME = 'bitcoin_prices.db'
+
+
+dotenv_path = os.path.abspath('./.env.local')
+
+if os.path.exists(dotenv_path):
+    dotenv.load_dotenv(dotenv_path=dotenv_path)
+    DB_URL = os.getenv('POSTGRES_URL')
+    print(DB_URL)
+else:
+    print(f"Error: The file {dotenv_path} does not exist.")
 
 def get_price_from_db(date):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('SELECT price FROM prices WHERE date = ?', (date,))
-    result = c.fetchone()
+    conn = psycopg2.connect(DB_URL)
+    with conn.cursor() as c:
+        c.execute('SELECT price FROM prices WHERE date = %s', (date,))
+        result = c.fetchone()
     conn.close()
     return result[0] if result else None
 
 def get_prices_from_db(start=None, end=None):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    if start and end:
-        c.execute('SELECT date, price FROM prices WHERE date BETWEEN? AND?', (start, end))
-    elif start:
-        c.execute('SELECT date, price FROM prices WHERE date >=?', (start,))
-    elif end:
-        c.execute('SELECT date, price FROM prices WHERE date <=?', (end,))
-    else:
-        c.execute('SELECT date, price FROM prices')
-    results = c.fetchall()
-    conn.close()
+    conn = psycopg2.connect(DB_URL)
+    try:
+        with conn.cursor() as c:
+            if start and end:
+                c.execute('SELECT date, price FROM prices WHERE date BETWEEN %s AND %s ORDER BY date', (start, end))
+            elif start:
+                c.execute('SELECT date, price FROM prices WHERE date >= %s ORDER BY date', (start,))
+            elif end:
+                c.execute('SELECT date, price FROM prices WHERE date <= %s ORDER BY date', (end,))
+            else:
+                c.execute('SELECT date, price FROM prices ORDER BY date')
+            results = c.fetchall()
+    finally:
+        conn.close()
     # return as list of date & price dictionary
     return [dict(zip(('date', 'price'), result)) for result in results]
 

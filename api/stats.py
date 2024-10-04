@@ -5,9 +5,9 @@ import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import csv, sys
 import pandas as pd
-import sqlite3
+import psycopg2
 
-DB_NAME = 'bitcoin_prices.db'
+DB_URL = "postgres://default:fTipzPb1CRW4@ep-steep-water-a6ryaha5.us-west-2.aws.neon.tech:5432/verceldb?sslmode=require"
 
 def power_law(x, a, b):
     return a * x ** b
@@ -15,18 +15,17 @@ def power_law(x, a, b):
 # todo: https://medium.com/@fulgur.ventures/bitcoin-power-law-theory-executive-summary-report-837e6f00347e
 
 def get_prices_from_db(start=None, end=None):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    if start and end:
-        c.execute('SELECT date, price FROM prices WHERE date BETWEEN? AND?', (start, end))
-    elif start:
-        c.execute('SELECT date, price FROM prices WHERE date >=?', (start,))
-    elif end:
-        c.execute('SELECT date, price FROM prices WHERE date <=?', (end,))
-    else:
-        c.execute('SELECT date, price FROM prices')
-    results = c.fetchall()
-    conn.close()
+    conn = psycopg2.connect(DB_URL)
+    with conn.cursor() as c:
+        if start and end:
+            c.execute('SELECT date, price FROM prices WHERE date BETWEEN? AND?', (start, end))
+        elif start:
+            c.execute('SELECT date, price FROM prices WHERE date >=?', (start,))
+        elif end:
+            c.execute('SELECT date, price FROM prices WHERE date <=?', (end,))
+        else:
+            c.execute('SELECT date, price FROM prices')
+        results = c.fetchall()
     # return as list of date & price dictionary
     return [dict(zip(('date', 'price'), result)) for result in results]
 
@@ -59,7 +58,7 @@ def linear_func(x, m, c):
 
 
 def compute_stats():
-    conn = sqlite3.connect(DB_NAME)
+    conn = psycopg2.connect(DB_URL)
     raw_data = pd.read_sql('SELECT date, price FROM prices', conn)
 
     data = process_data(raw_data)

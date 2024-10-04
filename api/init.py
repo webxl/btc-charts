@@ -1,43 +1,54 @@
 from datetime import datetime
-import sqlite3
 import requests
 import csv
 import sys
+import psycopg2
+from db_util import init_db, save_price_to_db, DB_URL
+import dotenv
+import os
 
-from db_util import init_db, save_price_to_db, DB_NAME
+
+dotenv_path = os.path.abspath('./.env.local')
+
+if os.path.exists(dotenv_path):
+    dotenv.load_dotenv(dotenv_path=dotenv_path)
+    DB_URL = os.getenv('POSTGRES_URL')
+    print(DB_URL)
+else:
+    print(f"Error: The file {dotenv_path} does not exist.")
 
 
 def insert_csv_data(csv_file):
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
+    conn = psycopg2.connect(DB_URL)
+    with conn.cursor() as c:
 
-    with open(csv_file, 'r') as file:
-        csv_reader = csv.reader(file, delimiter='\t')
-        next(csv_reader)  # Skip header row
+        with open(csv_file, 'r') as file:
+            csv_reader = csv.reader(file, delimiter='\t')
+            next(csv_reader)  # Skip header row
 
-        for row in csv_reader:
-            date, price = row
-            # Remove quotes from date and ensure ISO format
-            date = date.strip('"')
-            try:
-                # Attempt to parse the date and convert it to ISO format
-                parsed_date = datetime.strptime(date, "%Y-%m-%d")
-                iso_date = parsed_date.date().isoformat()
-            except ValueError:
-                print(f"Skipping invalid date: {date}")
-                continue
-            
-            save_price_to_db(conn, iso_date, float(price))
+            for row in csv_reader:
+                date, price = row
+                # Remove quotes from date and ensure ISO format
+                date = date.strip('"')
+                try:
+                    # Attempt to parse the date and convert it to ISO format
+                    parsed_date = datetime.strptime(date, "%Y-%m-%d")
+                    iso_date = parsed_date.date().isoformat()
+                except ValueError:
+                    print(f"Skipping invalid date: {date}")
+                    continue
+                
+                save_price_to_db(conn, iso_date, float(price))
 
     conn.commit()
     conn.close()
 
 
 def update_daily_series_from_cmc():
-    conn = sqlite3.connect(DB_NAME)
-    c = conn.cursor()
-    c.execute('SELECT MAX(date) FROM prices')
-    last_update = c.fetchone()[0] + 'T23:59:00'
+    conn = psycopg2.connect(DB_URL)
+    with conn.cursor() as c:
+        c.execute('SELECT MAX(date) FROM prices')
+        last_update = c.fetchone()[0] + 'T23:59:00'
 
     url = "https://api.coingecko.com/api/v3/coins/bitcoin/market_chart/range"
 

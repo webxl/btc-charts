@@ -34,3 +34,4 @@ dist-ssr
 env
 api/__pycache__
 api/bitcoin_prices.db
+.vercel

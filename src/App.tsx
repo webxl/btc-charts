@@ -55,19 +55,21 @@ function App() {
     return savedState ? (JSON.parse(savedState) as ChartSettings) : initialChartSettings;
   });
   const { colorMode } = useColorMode();
+  const [retryCount, setRetryCount] = useState(5);
 
   useEffect(() => {
     const fetchData = async () => {
       return fetch('/api/timeseries').then(r => r.json());
     };
 
-    if (!dailyPriceData.length) {
+    if (!dailyPriceData.length && retryCount > 0) {
+      setRetryCount(retryCount - 1);
       fetchData()
         .then(data => setdailyPriceData(data as DailyPriceDatum[]))
         // eslint-disable-next-line no-console
         .catch(e => console.error(e));
     }
-  }, [dailyPriceData]);
+  }, [dailyPriceData, retryCount]);
 
   const breakpointValue = useBreakpointValue({
     base: 'base',
