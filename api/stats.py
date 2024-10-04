@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 # from scipy.optimize import curve_fit
 import pandas as pd
 import psycopg2
+import os
 
 DB_URL = os.getenv('POSTGRES_URL')
 

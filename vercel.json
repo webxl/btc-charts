@@ -1,6 +1,3 @@
 {
-  "rewrites": [{ "source": "/api/(.*)", "destination": "api/app.py" }],
-  "env": {
-    "PYTHONPATH": "api/"
-  }
+  "rewrites": [{ "source": "/api/(.*)", "destination": "app.py" }]
 }

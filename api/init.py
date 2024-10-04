@@ -8,14 +8,17 @@ import dotenv
 import os
 
 
-dotenv_path = os.path.abspath('./.env.local')
+DB_URL = os.getenv('POSTGRES_URL')
 
-if os.path.exists(dotenv_path):
-    dotenv.load_dotenv(dotenv_path=dotenv_path)
-    DB_URL = os.getenv('POSTGRES_URL')
-    print(DB_URL)
-else:
-    print(f"Error: The file {dotenv_path} does not exist.")
+if not DB_URL:
+    dotenv_path = os.path.abspath('./.env.local')
+
+    if os.path.exists(dotenv_path):
+        dotenv.load_dotenv(dotenv_path=dotenv_path)
+        DB_URL = os.getenv('POSTGRES_URL')
+        print(DB_URL)
+    else:
+        print(f"Error: The file {dotenv_path} does not exist.")
 
 
 def insert_csv_data(csv_file):

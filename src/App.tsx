@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 import Parameters from './sections/parameters/index.tsx';
 
 import {
@@ -57,162 +58,177 @@ function App() {
   const { colorMode } = useColorMode();
   const [retryCount, setRetryCount] = useState(5);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      return fetch('/api/timeseries').then(r => r.json());
-    };
 
+  const fetchData = async () => {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const data: DailyPriceDatum[] = await fetch('/api/timeseries').then(r => r.json());
+      setdailyPriceData(data);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchData().catch(e => console.error(e));
+  }, []);
+
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
     if (!dailyPriceData.length && retryCount > 0) {
       setRetryCount(retryCount - 1);
-      fetchData()
-        .then(data => setdailyPriceData(data as DailyPriceDatum[]))
-        // eslint-disable-next-line no-console
-        .catch(e => console.error(e));
+
+      timeout = setTimeout(() => {
+        fetchData().catch(e => console.error(e));
+      }, 2000);
     }
+
+    return () => clearTimeout(timeout);
+
   }, [dailyPriceData, retryCount]);
 
   const breakpointValue = useBreakpointValue({
-    base: 'base',
-    md: 'md'
-  });
+      base: 'base',
+      md: 'md'
+    });
 
-  useEffect(() => {
-    localStorage.setItem('parameters', JSON.stringify(parameters));
-  }, [parameters]);
+    useEffect(() => {
+      localStorage.setItem('parameters', JSON.stringify(parameters));
+    }, [parameters]);
 
-  const handleParameterUpdate = useCallback((formData: AnalysisFormData) => {
-    setParameters({ ...formData });
-  }, []);
+    const handleParameterUpdate = useCallback((formData: AnalysisFormData) => {
+      setParameters({ ...formData });
+    }, []);
 
-  const handleChartSettingsChange = useCallback((settings: ChartSettings) => {
-    localStorage.setItem('chartSettings', JSON.stringify(settings));
-    setChartSettings(settings);
-  }, []);
+    const handleChartSettingsChange = useCallback((settings: ChartSettings) => {
+      localStorage.setItem('chartSettings', JSON.stringify(settings));
+      setChartSettings(settings);
+    }, []);
 
-  useEffect(() => {
-    const savedState = localStorage.getItem('parameters');
-    handleParameterUpdate(savedState ? (JSON.parse(savedState) as AnalysisFormData) : initialState);
-  }, [handleParameterUpdate]);
+    useEffect(() => {
+      const savedState = localStorage.getItem('parameters');
+      handleParameterUpdate(savedState ? (JSON.parse(savedState) as AnalysisFormData) : initialState);
+    }, [handleParameterUpdate]);
 
-  const resetToDefaults = useCallback(() => {
-    localStorage.setItem('parameters', JSON.stringify(initialState));
-    handleParameterUpdate({ ...initialState });
-    localStorage.setItem('chartSettings', JSON.stringify(initialChartSettings));
-    setChartSettings(initialChartSettings);
-  }, [handleParameterUpdate]);
+    const resetToDefaults = useCallback(() => {
+      localStorage.setItem('parameters', JSON.stringify(initialState));
+      handleParameterUpdate({ ...initialState });
+      localStorage.setItem('chartSettings', JSON.stringify(initialChartSettings));
+      setChartSettings(initialChartSettings);
+    }, [handleParameterUpdate]);
 
-  const {
-    isOpen: isDrawerOpen,
-    onOpen: setDrawerOpen,
-    onClose: setDrawerClosed
-  } = useDisclosure({ defaultIsOpen: breakpointValue === 'base' });
+    const {
+      isOpen: isDrawerOpen,
+      onOpen: setDrawerOpen,
+      onClose: setDrawerClosed
+    } = useDisclosure({ defaultIsOpen: breakpointValue === 'base' });
 
-  const onDateRangeAdjusted = useCallback(
-    (startDate: string, endDate: string) => {
-      handleParameterUpdate({ analysisStart: startDate, analysisEnd: endDate });
-    },
-    [handleParameterUpdate]
-  );
+    const onDateRangeAdjusted = useCallback(
+      (startDate: string, endDate: string) => {
+        handleParameterUpdate({ analysisStart: startDate, analysisEnd: endDate });
+      },
+      [handleParameterUpdate]
+    );
 
-  const parametersSection = (
-    <Parameters
-      onChange={handleParameterUpdate}
-      onChartSettingsChange={handleChartSettingsChange}
-      parameters={parameters}
-      chartSettings={chartSettings}
-      onDrawerClose={breakpointValue === 'base' ? setDrawerClosed : undefined}
-      resetToDefaults={resetToDefaults}
-    />
-  );
-
-  return (
-    <>
-      <Header
+    const parametersSection = (
+      <Parameters
+        onChange={handleParameterUpdate}
+        onChartSettingsChange={handleChartSettingsChange}
+        parameters={parameters}
+        chartSettings={chartSettings}
+        onDrawerClose={breakpointValue === 'base' ? setDrawerClosed : undefined}
+        resetToDefaults={resetToDefaults}
       />
-      {dailyPriceData.length && breakpointValue === 'base' && (
-        <HStack justifyContent={'space-between'} w={'100%'} mt={'55px'}>
-          <Button onClick={setDrawerOpen} variant={'ghost'} alignSelf={'center'}>
-            <Icon as={Sliders} mr={1} /> Parameters
-          </Button>
-          <Drawer isOpen={isDrawerOpen} onClose={setDrawerClosed} placement="left">
-            <DrawerOverlay />
-            <DrawerContent>
-              <DrawerCloseButton />
-              <DrawerHeader>Adjustments</DrawerHeader>
-              <DrawerBody>{parametersSection}</DrawerBody>
-            </DrawerContent>
-          </Drawer>
-        </HStack>
-      )}
-      {dailyPriceData.length && (
-        <HStack
-          alignItems={'stretch'}
-          justifyItems={'stretch'}
-          p={0}
-          gap={0}
-          mt={breakpointValue !== 'base' ? '50px' : 0}
-          height={'100%'}
-        >
-          {breakpointValue !== 'base' && (
-            <Box
-              backgroundColor={colorMode === 'light' ? 'gray.50' : 'gray.700'}
-              borderRight={`1px solid ${colorMode === 'light' ? '#eee' : '#555'}`}
-              w={'300px'}
-              minHeight={'calc(100vh - 50px)'}
-              px={5}
-              pt={2}
-            >
-              {parametersSection}
-            </Box>
-          )}
-          <VStack
+    );
+
+    return (
+      <>
+        <Header
+        />
+        {dailyPriceData.length && breakpointValue === 'base' && (
+          <HStack justifyContent={'space-between'} w={'100%'} mt={'55px'}>
+            <Button onClick={setDrawerOpen} variant={'ghost'} alignSelf={'center'}>
+              <Icon as={Sliders} mr={1} /> Parameters
+            </Button>
+            <Drawer isOpen={isDrawerOpen} onClose={setDrawerClosed} placement="left">
+              <DrawerOverlay />
+              <DrawerContent>
+                <DrawerCloseButton />
+                <DrawerHeader>Adjustments</DrawerHeader>
+                <DrawerBody>{parametersSection}</DrawerBody>
+              </DrawerContent>
+            </Drawer>
+          </HStack>
+        )}
+        {dailyPriceData.length && (
+          <HStack
             alignItems={'stretch'}
-            flexGrow={1}
-            minW={0}
+            justifyItems={'stretch'}
             p={0}
-            position={'relative'}
-            w={'100%'}
-            overflowY={'auto'}
+            gap={0}
+            mt={breakpointValue !== 'base' ? '50px' : 0}
+            height={'100%'}
           >
-            <Box mt={0} px={2} pt={14}>
-              <PowerLawChart
-                dailyPriceData={dailyPriceData}
-                parameters={parameters}
-                onDateRangeAdjusted={onDateRangeAdjusted}
-                chartSettings={chartSettings}
-              />{' '}
-              <VStack mt={14} w={'100%'} alignContent={'center'} gap={10}>
-                <Text fontSize={'xs'} maxW={760} textAlign={'center'} color={'gray.500'}>
-                  This tool is for illustrative purposes only. It is not intended to provide
-                  investment advice or financial planning services. The results are based on the
-                  information you provide and are not guaranteed. Actual results will definitely
-                  vary. Please consult a qualified professional for personalized advice, or just buy
-                  some{' '}
-                  <Link isExternal href={'https://www.swanbitcoin.com/motherway'}>
-                    ₿itcoin
-                  </Link>
-                  .
-                </Text>
-                <HStack maxW={760} justifyContent={'center'} alignItems={'flex-start'}>
-                  <Link fontSize={'xs'} color={'gray.500'} isExternal href={'https://webxl.net'}>
-                    webXL
-                  </Link>
-                  <Link
-                    color={'gray.500'}
-                    isExternal
-                    href={'https://github.com/webxl/btc-charts'}
-                  >
-                    {' '}
-                    <Icon as={GitHub} />{' '}
-                  </Link>
-                </HStack>
-              </VStack>
-            </Box>
-          </VStack>
-        </HStack>
-      )}
-    </>
-  );
-}
+            {breakpointValue !== 'base' && (
+              <Box
+                backgroundColor={colorMode === 'light' ? 'gray.50' : 'gray.700'}
+                borderRight={`1px solid ${colorMode === 'light' ? '#eee' : '#555'}`}
+                w={'300px'}
+                minHeight={'calc(100vh - 50px)'}
+                px={5}
+                pt={2}
+              >
+                {parametersSection}
+              </Box>
+            )}
+            <VStack
+              alignItems={'stretch'}
+              flexGrow={1}
+              minW={0}
+              p={0}
+              position={'relative'}
+              w={'100%'}
+              overflowY={'auto'}
+            >
+              <Box mt={0} px={2} pt={14}>
+                <PowerLawChart
+                  dailyPriceData={dailyPriceData}
+                  parameters={parameters}
+                  onDateRangeAdjusted={onDateRangeAdjusted}
+                  chartSettings={chartSettings}
+                />{' '}
+                <VStack mt={14} w={'100%'} alignContent={'center'} gap={10}>
+                  <Text fontSize={'xs'} maxW={760} textAlign={'center'} color={'gray.500'}>
+                    This tool is for illustrative purposes only. It is not intended to provide
+                    investment advice or financial planning services. The results are based on the
+                    information you provide and are not guaranteed. Actual results will definitely
+                    vary. Please consult a qualified professional for personalized advice, or just buy
+                    some{' '}
+                    <Link isExternal href={'https://www.swanbitcoin.com/motherway'}>
+                      ₿itcoin
+                    </Link>
+                    .
+                  </Text>
+                  <HStack maxW={760} justifyContent={'center'} alignItems={'flex-start'}>
+                    <Link fontSize={'xs'} color={'gray.500'} isExternal href={'https://webxl.net'}>
+                      webXL
+                    </Link>
+                    <Link
+                      color={'gray.500'}
+                      isExternal
+                      href={'https://github.com/webxl/btc-charts'}
+                    >
+                      {' '}
+                      <Icon as={GitHub} />{' '}
+                    </Link>
+                  </HStack>
+                </VStack>
+              </Box>
+            </VStack>
+          </HStack>
+        )}
+      </>
+    );
+  }
 
 export default App;
