@@ -76,6 +76,7 @@ def daily_price():
     return jsonify({'date': today, 'price': price})
 
 @app.route('/timeseries')
+@app.route('/api/timeseries')
 def time_series():
     start = request.args.get('start')
     end = request.args.get('end')
