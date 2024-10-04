@@ -2,7 +2,6 @@ import psycopg2
 import os
 import dotenv
 
-
 dotenv_path = os.path.abspath('./.env.local')
 
 if os.path.exists(dotenv_path):
