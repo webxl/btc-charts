@@ -2,12 +2,11 @@ from datetime import datetime
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
-import csv, sys
+# from scipy.optimize import curve_fit
 import pandas as pd
 import psycopg2
 
-DB_URL = "postgres://default:fTipzPb1CRW4@ep-steep-water-a6ryaha5.us-west-2.aws.neon.tech:5432/verceldb?sslmode=require"
+DB_URL = os.getenv('POSTGRES_URL')
 
 def power_law(x, a, b):
     return a * x ** b
@@ -74,7 +73,8 @@ def compute_stats():
     log_x = np.log(x)
     log_y = np.log(y)
 
-    popt, pcov = curve_fit(linear_func, log_x, log_y)
+    popt, pcov = np.polyfit(log_x, log_y, 2)
+    # popt, pcov = curve_fit(linear_func, log_x, log_y)
 
     # Extract parameters
     m, c = popt

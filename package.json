@@ -30,7 +30,6 @@
     "@nivo/scales": "^0.87.0",
     "@nivo/tooltip": "^0.87.0",
     "@react-spring/web": "^9.7.4",
-    "@rollup/rollup-darwin-arm64": "^4.20.0",
     "dayjs": "^1.11.12",
     "echarts": "^5.5.1",
     "framer-motion": "^11.3.27",
@@ -83,5 +82,8 @@
     "@nivo/line@^0.87.0": "patch:@nivo/line@npm%3A0.87.0#./.yarn/patches/@nivo-line-npm-0.87.0-e77862b0df.patch",
     "@nivo/scales@^0.87.0": "patch:@nivo/scales@npm%3A0.87.0#./.yarn/patches/@nivo-scales-npm-0.87.0-3ee8c1252c.patch",
     "@nivo/scales@0.87.0": "patch:@nivo/scales@npm%3A0.87.0#./.yarn/patches/@nivo-scales-npm-0.87.0-3ee8c1252c.patch"
+  },
+  "optionalDependencies": {
+    "@rollup/rollup-darwin-arm64": "^4.20.0"
   }
 }

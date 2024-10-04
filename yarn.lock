@@ -2110,7 +2110,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nivo/scales@npm:0.87.0, @nivo/scales@npm:^0.87.0":
+"@nivo/scales@npm:0.87.0":
   version: 0.87.0
   resolution: "@nivo/scales@npm:0.87.0"
   dependencies:
@@ -2122,6 +2122,21 @@ __metadata:
     d3-time-format: ^3.0.0
     lodash: ^4.17.21
   checksum: b427e7b19257004dc876f3677183f64b958c233b26f0c5a5a6d989d347792be309df928479a47f4de1b28d9f3404371565e73acb65700972c0e82f79cf8474cf
+  languageName: node
+  linkType: hard
+
+"@nivo/scales@patch:@nivo/scales@npm%3A0.87.0#./.yarn/patches/@nivo-scales-npm-0.87.0-3ee8c1252c.patch::locator=btc-charts%40workspace%3A.":
+  version: 0.87.0
+  resolution: "@nivo/scales@patch:@nivo/scales@npm%3A0.87.0#./.yarn/patches/@nivo-scales-npm-0.87.0-3ee8c1252c.patch::version=0.87.0&hash=bd0f2b&locator=btc-charts%40workspace%3A."
+  dependencies:
+    "@types/d3-scale": ^4.0.8
+    "@types/d3-time": ^1.1.1
+    "@types/d3-time-format": ^3.0.0
+    d3-scale: ^4.0.2
+    d3-time: ^1.0.11
+    d3-time-format: ^3.0.0
+    lodash: ^4.17.21
+  checksum: f7aee987d66f9a8557ad6656ccab7ddaea12fceb04a74d5624d604dbc40bd91b7b9a9b005019a1289a5471b50c4845f0a8d5f8fda9c713daa84e05d2d476321a
   languageName: node
   linkType: hard
 
@@ -2299,7 +2314,6 @@ __metadata:
 "@rollup/rollup-darwin-arm64@npm:4.20.0, @rollup/rollup-darwin-arm64@npm:^4.20.0":
   version: 4.20.0
   resolution: "@rollup/rollup-darwin-arm64@npm:4.20.0"
-  checksum: ecfcaaa8e7f050ad656d22f504b143704aa6d23c6561b561356b207c708a0bc376d14d7fcf3b39adfd36326320a20db273eae6cc4de16563f3727c8ae36dfed4
   conditions: os=darwin & cpu=arm64
   languageName: node
   linkType: hard
@@ -3245,6 +3259,8 @@ __metadata:
       unplugged: true
     "@nivo/scales@0.87.0":
       unplugged: true
+    "@rollup/rollup-darwin-arm64":
+      optional: true
   languageName: unknown
   linkType: soft
 
