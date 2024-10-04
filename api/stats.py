@@ -1,7 +1,6 @@
 from datetime import datetime
 
 import numpy as np
-import matplotlib.pyplot as plt
 # from scipy.optimize import curve_fit
 import pandas as pd
 import psycopg2
@@ -100,7 +99,7 @@ def compute_stats():
     }
 
     
-
+""" 
 
 def plot_data(ax, x, y, x_pred, lower_1std, upper_1std, lower_2std, upper_2std):
     # Create a figure with two subplots
@@ -130,3 +129,4 @@ def plot_data(ax, x, y, x_pred, lower_1std, upper_1std, lower_2std, upper_2std):
     plt.tight_layout()
     plt.show()
 
+ """
