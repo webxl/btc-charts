@@ -3,8 +3,11 @@ import requests
 import os
 from datetime import date
 from flask import Flask, jsonify, request
-from db_util import init_db, save_price_to_db
-from stats import compute_stats
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from .db_util import init_db, save_price_to_db
+from .stats import compute_stats
 import dotenv
 
 
@@ -79,6 +82,10 @@ def time_series():
     prices = get_prices_from_db(start, end)
     return jsonify(prices)
 
-if __name__ == '__main__':
-    init_db()
+
+def main():
     app.run(debug=True)
+
+# if __name__ == '__main__':
+#     init_db()
+#     app.run(debug=True)
