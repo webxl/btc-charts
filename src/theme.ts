@@ -268,6 +268,7 @@ export const nivoThemes = {
 
 const config = {
   initialColorMode: 'dark',
+  useSystemColorMode: false,
   fonts: {
     heading: `'Brawler',  sans-serif`,
     body: `'Roboto', sans-serif`
