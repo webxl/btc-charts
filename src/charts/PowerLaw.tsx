@@ -43,7 +43,7 @@ const AreaPath = ({
   return (
     <animated.path
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      d={to(animatedPath, (p) => p || '')} // Handle potential undefined values
+      d={to(animatedPath, (p) => p || '')} 
       fill={fill ? fill : animatedProps.color}
       fillOpacity={areaOpacity}
       strokeWidth={0}
@@ -67,7 +67,6 @@ const PowerLawChart = ({
 }) => {
 
   const { colorMode } = useColorMode();
-
 
   const _startDate = dayjs(parameters.analysisStart).toDate();
   const _endDate = dayjs(parameters.analysisEnd).toDate();

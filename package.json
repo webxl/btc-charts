@@ -1,9 +1,8 @@
 {
   "name": "btc-charts",
-  "packageManager": "yarn@4.3.1",
+  "packageManager": "yarn@3.2.3+sha512.f26f951f67de0c6a33ee381e5ff364709c87e70eb5e65c694e4facde3512f1fa80b8679e6ba31ce7d340fbb46f08dd683af9457e240f25a204be7427940d767e",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -60,27 +59,11 @@
     "typescript": "^5.2.2",
     "vite": "^5.3.4"
   },
-  "dependenciesMeta": {
-    "@chakra-ui/react@2.8.2": {
-      "unplugged": true
-    },
-    "@chakra-ui/theme@3.3.1": {
-      "unplugged": true
-    },
-    "@nivo/core@0.87.0": {
-      "unplugged": true
-    },
-    "@nivo/line@0.87.0": {
-      "unplugged": true
-    },
-    "@nivo/scales@0.87.0": {
-      "unplugged": true
-    }
-  },
   "resolutions": {
-    "@nivo/line@^0.87.0": "patch:@nivo/line@npm%3A0.87.0#./.yarn/patches/@nivo-line-npm-0.87.0-e77862b0df.patch",
     "@nivo/scales@^0.87.0": "patch:@nivo/scales@npm%3A0.87.0#./.yarn/patches/@nivo-scales-npm-0.87.0-3ee8c1252c.patch",
-    "@nivo/scales@0.87.0": "patch:@nivo/scales@npm%3A0.87.0#./.yarn/patches/@nivo-scales-npm-0.87.0-3ee8c1252c.patch"
+    "@nivo/scales@npm:0.87.0": "patch:@nivo/scales@npm%3A0.87.0#./.yarn/patches/@nivo-scales-npm-0.87.0-3ee8c1252c.patch",
+    "@nivo/line@^0.87.0": "patch:@nivo/line@npm%3A0.87.0#./.yarn/patches/@nivo-line-npm-0.87.0-e77862b0df.patch",
+    "@nivo/line@0.87.0": "patch:@nivo/line@npm%3A0.87.0#./.yarn/patches/@nivo-line-npm-0.87.0-e77862b0df.patch"
   },
   "optionalDependencies": {
     "@rollup/rollup-darwin-arm64": "^4.24.0"
