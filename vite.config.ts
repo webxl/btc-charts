@@ -21,7 +21,7 @@ export default defineConfig({
       },
       preserveEntrySignatures: 'strict',
       treeshake: false,
-      logLevel: 'debug'
+      logLevel: 'debug',
     }
   }
 });
