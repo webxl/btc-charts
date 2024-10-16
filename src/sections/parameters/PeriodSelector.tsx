@@ -6,11 +6,13 @@ import { Label } from './inputs';
 export const PeriodSelector = ({
   onChange,
   analysisStart,
-  analysisEnd
+  analysisEnd,
+  isDisabled
 }: {
   onChange: (period: number) => void;
   analysisStart: string;
   analysisEnd: string;
+  isDisabled: boolean;
 }) => {
   const periods = [1, 5, 10, Infinity];
   const [selectedPeriod, setSelectedPeriod] = useState(1);
@@ -30,7 +32,7 @@ export const PeriodSelector = ({
       <Label label={'Period'} />
       <HStack>
         {periods.map((period) => (
-        <Button key={period} onClick={() => handlePeriodChange(period)} variant={selectedPeriod === period ? 'solid' : 'outline'}>
+        <Button key={period} onClick={() => handlePeriodChange(period)} variant={selectedPeriod === period ? 'solid' : 'outline'} isDisabled={isDisabled}>
           {period !== Infinity ? `${period}y` : 'All'}
         </Button>
         ))}

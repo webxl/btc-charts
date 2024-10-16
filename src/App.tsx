@@ -12,6 +12,7 @@ import {
   DrawerOverlay,
   HStack,
   Link,
+  Skeleton,
   Text,
   useBreakpointValue,
   useDisclosure,
@@ -44,6 +45,23 @@ const initialChartSettings = {
   showInnerBand: false,
   showPricePlot: true
 };
+
+const apiUrl = (import.meta.env.VITE_API_URL as string) || '/api';
+
+const fetchData = async (callback: (data: DailyPriceDatum[]) => void) => {
+  try {
+    const data: DailyPriceDatum[] = await fetch(`${apiUrl}/timeseries`).then(r => {
+      if (!r.ok) {
+        throw new Error('Invalid network response');
+      }
+      return r.json() as Promise<DailyPriceDatum[]>;
+    });
+    callback(data);
+  } catch (e) {
+    console.error(e);
+  }
+};
+
 function App() {
   const [dailyPriceData, setdailyPriceData] = useState<DailyPriceDatum[]>([]);
 
@@ -55,22 +73,19 @@ function App() {
     const savedState = localStorage.getItem('chartSettings');
     return savedState ? (JSON.parse(savedState) as ChartSettings) : initialChartSettings;
   });
-  const { colorMode } = useColorMode();
-  const [retryCount, setRetryCount] = useState(5);
-
-
-  const fetchData = async () => {
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const data: DailyPriceDatum[] = await fetch('/api/timeseries').then(r => r.json());
-      setdailyPriceData(data);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  const { colorMode, toggleColorMode } = useColorMode();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    fetchData().catch(e => console.error(e));
+    if (colorMode === undefined) {
+      toggleColorMode();
+    }
+  }, [colorMode, toggleColorMode]);
+
+  const [retryCount, setRetryCount] = useState(5);
+
+  useEffect(() => {
+    fetchData(setdailyPriceData).then(() => setIsLoading(false)).catch(e => console.error(e));
   }, []);
 
   useEffect(() => {
@@ -79,7 +94,7 @@ function App() {
       setRetryCount(retryCount - 1);
 
       timeout = setTimeout(() => {
-        fetchData().catch(e => console.error(e));
+        fetchData(setdailyPriceData).catch(e => console.error(e));
       }, 2000);
     }
 
@@ -138,6 +153,7 @@ function App() {
         chartSettings={chartSettings}
         onDrawerClose={breakpointValue === 'base' ? setDrawerClosed : undefined}
         resetToDefaults={resetToDefaults}
+        isLoading={isLoading}
       />
     );
 
@@ -160,7 +176,6 @@ function App() {
             </Drawer>
           </HStack>
         )}
-        {dailyPriceData.length && (
           <HStack
             alignItems={'stretch'}
             justifyItems={'stretch'}
@@ -190,13 +205,15 @@ function App() {
               w={'100%'}
               overflowY={'auto'}
             >
-              <Box mt={0} px={2} pt={14}>
+              <VStack mt={0} px={2} pt={14} alignItems={'stretch'}>
+                {(isLoading || !dailyPriceData.length )? <Skeleton speed={2} height={400} width={'90%'} alignSelf={'center'} /> : (   
                 <PowerLawChart
                   dailyPriceData={dailyPriceData}
                   parameters={parameters}
                   onDateRangeAdjusted={onDateRangeAdjusted}
-                  chartSettings={chartSettings}
-                />{' '}
+                    chartSettings={chartSettings}
+                  />
+                )}
                 <VStack mt={14} w={'100%'} alignContent={'center'} gap={10}>
                   <Text fontSize={'xs'} maxW={760} textAlign={'center'} color={'gray.500'}>
                     This tool is for illustrative purposes only. It is not intended to provide
@@ -223,10 +240,9 @@ function App() {
                     </Link>
                   </HStack>
                 </VStack>
-              </Box>
+              </VStack>
             </VStack>
           </HStack>
-        )}
       </>
     );
   }
