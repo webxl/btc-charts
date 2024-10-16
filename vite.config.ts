@@ -12,16 +12,5 @@ export default defineConfig({
         rewrite: path => path.replace(/^\/api/, '')
       }
     }
-  },
-  build: {
-    sourcemap: true,
-    // rollupOptions: {
-    //   output: {
-    //     preserveModules: true,
-    //   },
-    //   preserveEntrySignatures: 'strict',
-    //   // treeshake: false,
-    //   logLevel: 'debug',
-    // }
   }
 });

@@ -12,6 +12,7 @@ import {
   DrawerOverlay,
   HStack,
   Link,
+  Skeleton,
   Text,
   useBreakpointValue,
   useDisclosure,
@@ -73,6 +74,7 @@ function App() {
     return savedState ? (JSON.parse(savedState) as ChartSettings) : initialChartSettings;
   });
   const { colorMode, toggleColorMode } = useColorMode();
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (colorMode === undefined) {
@@ -83,7 +85,7 @@ function App() {
   const [retryCount, setRetryCount] = useState(5);
 
   useEffect(() => {
-    fetchData(setdailyPriceData).catch(e => console.error(e));
+    fetchData(setdailyPriceData).then(() => setIsLoading(false)).catch(e => console.error(e));
   }, []);
 
   useEffect(() => {
@@ -151,6 +153,7 @@ function App() {
         chartSettings={chartSettings}
         onDrawerClose={breakpointValue === 'base' ? setDrawerClosed : undefined}
         resetToDefaults={resetToDefaults}
+        isLoading={isLoading}
       />
     );
 
@@ -173,7 +176,6 @@ function App() {
             </Drawer>
           </HStack>
         )}
-        {dailyPriceData.length && (
           <HStack
             alignItems={'stretch'}
             justifyItems={'stretch'}
@@ -203,13 +205,15 @@ function App() {
               w={'100%'}
               overflowY={'auto'}
             >
-              <Box mt={0} px={2} pt={14}>
+              <VStack mt={0} px={2} pt={14} alignItems={'stretch'}>
+                {(isLoading || !dailyPriceData.length )? <Skeleton speed={2} height={400} width={'90%'} alignSelf={'center'} /> : (   
                 <PowerLawChart
                   dailyPriceData={dailyPriceData}
                   parameters={parameters}
                   onDateRangeAdjusted={onDateRangeAdjusted}
-                  chartSettings={chartSettings}
-                />{' '}
+                    chartSettings={chartSettings}
+                  />
+                )}
                 <VStack mt={14} w={'100%'} alignContent={'center'} gap={10}>
                   <Text fontSize={'xs'} maxW={760} textAlign={'center'} color={'gray.500'}>
                     This tool is for illustrative purposes only. It is not intended to provide
@@ -236,10 +240,9 @@ function App() {
                     </Link>
                   </HStack>
                 </VStack>
-              </Box>
+              </VStack>
             </VStack>
           </HStack>
-        )}
       </>
     );
   }

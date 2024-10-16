@@ -8,6 +8,7 @@ import { PeriodSelector } from './PeriodSelector.tsx';
 import ChartControls, { ChartSettings } from '../../charts/ChartControls.tsx';
 
 const Parameters = ({
+  isLoading,
   onChange,
   onChartSettingsChange,
   parameters,
@@ -21,6 +22,7 @@ const Parameters = ({
   chartSettings: ChartSettings;
   onDrawerClose?: (() => void) | undefined;
   resetToDefaults: () => void;
+  isLoading: boolean;
 }) => {
   const [state, dispatch] = useReducer(parametersReducer, {
     ...parameters,
@@ -84,6 +86,7 @@ const Parameters = ({
         min={'2009-01-03'}
         max={state.analysisEnd}
         useOverride={state.overrides.analysisStart}
+        isDisabled={isLoading}
       />
 
       <DateInput
@@ -93,12 +96,14 @@ const Parameters = ({
         min={state.analysisStart}
         max={'2999-12-31'}
         useOverride={state.overrides.analysisEnd}
+        isDisabled={isLoading}
       />
 
       <PeriodSelector
         onChange={handlePeriodChange}
         analysisStart={state.analysisStart}
         analysisEnd={state.analysisEnd}
+        isDisabled={isLoading}
       />
 
       {onDrawerClose && (
@@ -107,7 +112,7 @@ const Parameters = ({
         </Button>
       )}
       <Divider my={4} />
-      <ChartControls chartSettings={state.chartSettings} onChartSettingsChange={handleChartSettingsChange} />
+      <ChartControls chartSettings={state.chartSettings} onChartSettingsChange={handleChartSettingsChange} isLoading={isLoading} />
       <Divider my={4} />
 
       <Button variant={'link'} onClick={_resetToDefaults} >
