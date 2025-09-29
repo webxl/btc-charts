@@ -22,12 +22,12 @@
     "@fontsource/forum": "^5.0.20",
     "@fontsource/public-sans": "^5.0.18",
     "@fontsource/roboto": "^5.0.14",
-    "@nivo/bar": "^0.87.0",
-    "@nivo/core": "^0.87.0",
-    "@nivo/line": "^0.87.0",
-    "@nivo/pie": "^0.87.0",
-    "@nivo/scales": "^0.87.0",
-    "@nivo/tooltip": "^0.87.0",
+    "@nivo/bar": "^0.99.0",
+    "@nivo/core": "^0.99.0",
+    "@nivo/line": "^0.99.0",
+    "@nivo/pie": "^0.99.0",
+    "@nivo/scales": "^0.99.0",
+    "@nivo/tooltip": "^0.99.0",
     "@react-spring/web": "^9.7.4",
     "dayjs": "^1.11.12",
     "framer-motion": "^11.3.27",
@@ -58,12 +58,6 @@
     "prettier": "^3.3.3",
     "typescript": "^5.2.2",
     "vite": "^5.3.4"
-  },
-  "resolutions": {
-    "@nivo/scales@^0.87.0": "patch:@nivo/scales@npm%3A0.87.0#./.yarn/patches/@nivo-scales-npm-0.87.0-3ee8c1252c.patch",
-    "@nivo/scales@npm:0.87.0": "patch:@nivo/scales@npm%3A0.87.0#./.yarn/patches/@nivo-scales-npm-0.87.0-3ee8c1252c.patch",
-    "@nivo/line@^0.87.0": "patch:@nivo/line@npm%3A0.87.0#./.yarn/patches/@nivo-line-npm-0.87.0-e77862b0df.patch",
-    "@nivo/line@0.87.0": "patch:@nivo/line@npm%3A0.87.0#./.yarn/patches/@nivo-line-npm-0.87.0-e77862b0df.patch"
   },
   "optionalDependencies": {
     "@rollup/rollup-darwin-arm64": "^4.24.0"

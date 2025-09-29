@@ -1,4 +1,4 @@
-import { ComputedDatum, ComputedSerie, Point, ResponsiveLine, SliceTooltipProps } from '@nivo/line';
+import { ComputedDatum, ComputedSeries, Point, ResponsiveLine, SliceTooltipProps } from '@nivo/line';
 import { nivoThemes } from '../theme.ts';
 import { useColorMode } from '@chakra-ui/system';
 import { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -7,7 +7,6 @@ import dayjs from 'dayjs';
 import { generatePriceBands, AnalysisFormData, priceBandLabels, PriceBandTypes, DailyPriceDatum } from '../calc.ts';
 import { formatCurrency, formatCurrencyWithCents } from '../utils.ts';
 import { linearGradientDef, Defs, useAnimatedPath, useMotionConfig } from '@nivo/core';
-import { Scale } from '@nivo/scales';
 import { area } from 'd3-shape';
 import { debounce } from 'lodash';
 
@@ -54,6 +53,8 @@ const AreaPath = ({
   );
 };
 
+type Datum = { x: number; y: number | null };
+
 const PowerLawChart = ({
   dailyPriceData,
   parameters,
@@ -82,7 +83,7 @@ const PowerLawChart = ({
 
   const [highestPriceInData, setHighestPriceInData] = useState(0);
 
-  const data = useMemo(() => {
+  const data = useMemo((): readonly { id: string; color: string; data: Datum[] }[] => {
     const priceBands = generatePriceBands(startDate, endDate, dailyPriceData, chartSettings.useXLog, chartSettings.useXLog ? 500 : 900);
     let highestPrice = 0;
     const data = (
@@ -149,7 +150,7 @@ const PowerLawChart = ({
   }, [chartSettings.useYLog, highestPriceInData]);
 
   const sliceTooltip = useCallback(
-    ({ slice }: SliceTooltipProps) => {
+    ({ slice }: SliceTooltipProps<ComputedSeries<Datum>>) => {
       const xFormatted = slice.points[0].data.xFormatted;
       const seenLabels = new Set<PriceBandTypes>();
       return (
@@ -184,14 +185,14 @@ const PowerLawChart = ({
             )}
           </div>
           {Array.prototype.sort
-            .call(slice.points, (p1: Point, p2: Point) => (p1.data.y < p2.data.y ? 1 : -1))
-            .filter((p: Point) => p.data.xFormatted === xFormatted)
-            .map((point: Point): ReactElement | undefined => {
+            .call(slice.points, (p1: Point<Datum>, p2: Point<Datum>) => (p1.data.y < p2.data.y ? 1 : -1))
+            .filter((p: Point<Datum>) => p.data.xFormatted === xFormatted)
+            .map((point: Point<Datum>): ReactElement | undefined => {
               const price = point.data.y as number;
-              if (seenLabels.has(point.serieId as PriceBandTypes)) { // overlapping point fix
+              if (seenLabels.has(point.seriesId as PriceBandTypes)) { // overlapping point fix
                 return undefined;
               }
-              seenLabels.add(point.serieId as PriceBandTypes);
+              seenLabels.add(point.seriesId as PriceBandTypes);
               return (
                 <div
                   key={point.id}
@@ -211,15 +212,15 @@ const PowerLawChart = ({
                       color: colorMode === 'dark' ? '#ccc' : '#333'
                     }}
                   >
-                    {priceBandLabels[point.serieId as PriceBandTypes]}:{' '}
+                    {priceBandLabels[point.seriesId as PriceBandTypes]}:{' '}
                   </div>
 
                   <div
                     style={{
                       color:
-                        (point.serieId as PriceBandTypes).indexOf('igma') !== -1
+                        (point.seriesId as PriceBandTypes).indexOf('igma') !== -1
                           ? sigmaBandColor
-                          : point.serieColor,
+                          : point.seriesColor,
                       flexGrow: 1,
                       justifyContent: 'flex-end',
                       textAlign: 'right',
@@ -238,31 +239,23 @@ const PowerLawChart = ({
     [colorMode, genesis, chartSettings.useXLog]
   );
 
-  const AreaLayer = ({
-    series,
-    xScale,
-    yScale
-  }: {
-    series: readonly ComputedSerie[];
-    xScale: Scale<number, number>;
-    yScale: Scale<number, number>;
-  }) => {
-    const getArea = (lowerBound: readonly ComputedDatum[]) =>
-      area<ComputedDatum>()
-        .x(d => xScale(d.data.x as number) ?? 0)
-        .y0(d => {
-          const y = d.data.y as number;
-          return chartSettings.useYLog && y <= 0 ? yScale.range()[0] : yScale(y) ?? 0;
+  const AreaLayer = ({ series, xScale, yScale, innerHeight }: any) => {
+    const getArea = (lowerBound: readonly any[]) =>
+      area<any>()
+        .x((d: any) => (typeof xScale === 'function' ? xScale(Number(d.data.x)) : 0))
+        .y0((d: any) => {
+          const y = Number(d.data.y);
+          return chartSettings.useYLog && y <= 0 ? innerHeight : (typeof yScale === 'function' ? yScale(y) : 0) ?? 0;
         })
-        .y1((_d, i) => {
-          const y = lowerBound[i].data.y as number;
-          return chartSettings.useYLog && y <= 0 ? yScale.range()[0] : yScale(y) ?? 0;
+        .y1((_d: any, i: number) => {
+          const y = Number(lowerBound[i].data.y);
+          return chartSettings.useYLog && y <= 0 ? innerHeight : (typeof yScale === 'function' ? yScale(y) : 0) ?? 0;
         });
 
-    const lowerOuterBound = series.find(s => s.id === PriceBandTypes.negTwoSigma)?.data ?? [];
-    const upperOuterBound = series.find(s => s.id === PriceBandTypes.posTwoSigma)?.data ?? [];
-    const lowerInnerBound = series.find(s => s.id === PriceBandTypes.negOneSigma)?.data ?? [];
-    const upperInnerBound = series.find(s => s.id === PriceBandTypes.posOneSigma)?.data ?? [];
+    const lowerOuterBound = (series as readonly any[]).find((s) => s.id === PriceBandTypes.negTwoSigma)?.data ?? [];
+    const upperOuterBound = (series as readonly any[]).find((s) => s.id === PriceBandTypes.posTwoSigma)?.data ?? [];
+    const lowerInnerBound = (series as readonly any[]).find((s) => s.id === PriceBandTypes.negOneSigma)?.data ?? [];
+    const upperInnerBound = (series as readonly any[]).find((s) => s.id === PriceBandTypes.posOneSigma)?.data ?? [];
 
     const outerBand = chartSettings.showOuterBand ? getArea(lowerOuterBound)(upperOuterBound) : null;
     const innerBand = chartSettings.showInnerBand ? getArea(lowerInnerBound)(upperInnerBound) : null;
@@ -442,13 +435,15 @@ const PowerLawChart = ({
         xScale={{
           type: chartSettings.useXLog ? 'log' : 'linear',
           min: minX,
-          max: maxX
+          max: maxX,
+          nice: false
         }}
         gridXValues={[]}
         yScale={{
           type: chartSettings.useYLog ? 'log' : 'linear',
           min: minY,
-          max: maxY
+          max: maxY,
+          nice: false
         }}
         gridYValues={chartSettings.useYLog ? [1, 1000, 1000000, 1000000000] : []}
         axisBottom={{
