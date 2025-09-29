@@ -51,11 +51,11 @@ const ChartControls = ({
     <FormControl>
       <Label label='Deviation Bands' />
       <HStack>
-        <Button onClick={() => toggleSetting('showOuterBand')} isDisabled={isLoading}>
-          {chartSettings.showOuterBand ? 'Hide' : 'Show'} Outer
-        </Button>
         <Button onClick={() => toggleSetting('showInnerBand')} isDisabled={isLoading}>
           {chartSettings.showInnerBand ? 'Hide' : 'Show'} Inner
+        </Button>
+        <Button onClick={() => toggleSetting('showOuterBand')} isDisabled={isLoading}>
+          {chartSettings.showOuterBand ? 'Hide' : 'Show'} Outer
         </Button>
         </HStack>
       </FormControl>

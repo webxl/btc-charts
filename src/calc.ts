@@ -149,17 +149,16 @@ export function generatePriceBands(
     return (i / (numPoints - 1)) * days;
   };
 
-  let lastDate = '';
-
+  const lastPrice = dailyPriceData[dailyPriceData.length - 1];
   const firstPriceDate = dayjs(dailyPriceData[0].date);
-  const lastPriceDate = dayjs(dailyPriceData[dailyPriceData.length - 1].date);
+  const lastPriceDate = dayjs(lastPrice.date);
 
-  function populateBands(currentDate: dayjs.Dayjs, xDays: number) {
+  function populateBands(currentDate: dayjs.Dayjs, xDays: number, isLastPrice: boolean = false) {
     const dailyPriceIndex = currentDate.diff(firstPriceDate, 'day');
     const historicalPrice = dailyPriceData[dailyPriceIndex];
     priceBands.price.push({
       date: currentDate.format('YYYY-MM-DD'),
-      price: historicalPrice?.price || 0
+      price: historicalPrice?.price || (isLastPrice ? lastPrice.price : 0)
     });
     priceBands.posTwoSigma.push({
       date: currentDate.format('YYYY-MM-DD'),
@@ -183,28 +182,33 @@ export function generatePriceBands(
     });
   }
 
+  let lastDate = dayjs();
+
+  // sample numPoints points
   for (let i = 0; i < numPoints; i++) {
     const dayOffset = Math.round(useXLog ? logScale(i) : linearScale(i));
     const currentDate = start.add(dayOffset, 'day');
 
-    if (lastDate === currentDate.format('YYYY-MM-DD')) continue;
+    if (currentDate.isSame(lastDate)) continue;
 
-    if (firstPriceDate > dayjs(lastDate) && firstPriceDate < currentDate)
+    // include first and last prices
+    if (firstPriceDate.isAfter(dayjs(lastDate)) && firstPriceDate.isBefore(currentDate))
       populateBands(firstPriceDate, firstPriceDate.diff(start, 'day'));
 
-    if (lastPriceDate > dayjs(lastDate) && lastPriceDate < currentDate)
-      populateBands(dayjs(lastPriceDate), lastPriceDate.diff(start, 'day'));
+    if (lastPriceDate.isAfter(dayjs(lastDate)) && (lastPriceDate.isBefore(currentDate) || lastPriceDate.isSame(currentDate))) { // did we skip it?
+      populateBands(lastPriceDate, lastPriceDate.diff(start, 'day'), true);
+      lastDate = currentDate;
+      continue;
+    }
 
-    lastDate = currentDate.format('YYYY-MM-DD');
-
-    const xDays = currentDate.diff(start, 'day');
+    lastDate = currentDate;
 
     // Ensure we don't exceed the end date
     if (currentDate.isAfter(end)) {
       break;
     }
 
-    populateBands(currentDate, xDays);
+    populateBands(currentDate, currentDate.diff(start, 'day'));
   }
   return priceBands;
 }

@@ -111,7 +111,8 @@ const lightTheme: DefaultTheme = {
   },
   tooltip: {
     container: {
-      fontSize: '13px'
+      fontSize: '13px',
+      zIndex: 10000
     }
   },
   labels: {
@@ -209,7 +210,8 @@ const darkTheme: DefaultTheme = {
     container: {
       fontSize: '13px',
       background: '#000',
-      color: '#ddd'
+      color: '#ddd',
+      zIndex: 10000
     }
   },
   labels: {

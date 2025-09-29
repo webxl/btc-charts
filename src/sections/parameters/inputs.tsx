@@ -202,15 +202,17 @@ const _Input = ({
 
   const handleDateChangeEvent = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const dayValue = dayjs(e.target.value);
-
-      if (dayValue < dayjs(min) || dayValue > dayjs(max)) {
-        e.preventDefault();
+      if (!e.target.value) {
         return;
       }
-
-      setFormattedAmount(dayValue.format('YYYY-MM-DD'));
+      const dayValue = dayjs(e.target.value);
       setExternallySetValue(e.target.value);
+       if (dayValue < dayjs(min) || dayValue > dayjs(max)) {
+        e.preventDefault();
+        return true;
+      }
+      setFormattedAmount(dayValue.format('YYYY-MM-DD'));
+      onChange(dayValue.format('YYYY-MM-DD'));
     },
     [min, max]
   );

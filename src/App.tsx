@@ -55,6 +55,26 @@ const fetchData = async (callback: (data: DailyPriceDatum[]) => void) => {
         throw new Error('Invalid network response');
       }
       return r.json() as Promise<DailyPriceDatum[]>;
+    }).then(data => {
+        let _lastDate = dayjs(data[0].date);
+        const _dailyPriceData = [...data];
+        for (let i = 0; i < data.length; i++) {
+          const currentDate = dayjs(data[i].date);
+          const numDays = currentDate.diff(_lastDate, 'day');
+          if (numDays > 1) {
+            console.log('Missing data between', _lastDate.format('YYYY-MM-DD'), 'and', currentDate.format('YYYY-MM-DD'));
+            // fill missing points
+            for (let j = 0; j < numDays; j++) {
+              _dailyPriceData.splice(i + j, 0, {
+                date: _lastDate.add(j + 1, 'day').format('YYYY-MM-DD'),
+                price: _dailyPriceData[i].price
+              });
+            }
+          }
+          _lastDate = currentDate;
+        }
+
+        return _dailyPriceData;
     });
     callback(data);
   } catch (e) {
@@ -199,13 +219,16 @@ function App() {
             <VStack
               alignItems={'stretch'}
               flexGrow={1}
+              w={'100%'}
               minW={0}
               p={0}
               position={'relative'}
-              w={'100%'}
-              overflowY={'auto'}
+              overflow={'visible'}
+              zIndex={1}
             >
-              <VStack mt={0} px={2} pt={14} alignItems={'stretch'}>
+              <VStack mt={0} px={2} pt={5} alignItems={'stretch'} 
+              zIndex={1}
+              >
                 {(isLoading || !dailyPriceData.length )? <Skeleton speed={2} height={400} width={'90%'} alignSelf={'center'} /> : (   
                 <PowerLawChart
                   dailyPriceData={dailyPriceData}

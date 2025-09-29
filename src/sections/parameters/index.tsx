@@ -32,10 +32,16 @@ const Parameters = ({
   });
 
   const handleAnalysisStartChange = useCallback((startDate: string | number) => {
+    if (!startDate || startDate === 'Invalid Date') {
+      return;
+    }
     dispatch({ type: 'analysisStart', value: startDate, isDirty: true, setOverride: false });
   }, []);
 
   const handleAnalysisEndChange = useCallback((endDate: string | number) => {
+    if (!endDate || endDate === 'Invalid Date') {
+      return;
+    }
     dispatch({ type: 'analysisEnd', value: endDate, isDirty: true, setOverride: false });
   }, []);
 
@@ -83,8 +89,8 @@ const Parameters = ({
         label={'Analysis Start Date'}
         value={state.analysisStart}
         onChange={handleAnalysisStartChange}
-        min={'2009-01-03'}
-        max={state.analysisEnd}
+        min={'2009-01-04'}
+        max={dayjs(state.analysisEnd).subtract(1, 'day').format('YYYY-MM-DD')}
         useOverride={state.overrides.analysisStart}
         isDisabled={isLoading}
       />

@@ -1,11 +1,11 @@
-import { ComputedDatum, ComputedSeries, Point, ResponsiveLine, SliceTooltipProps } from '@nivo/line';
+import { ResponsiveLine, SliceTooltipProps } from '@nivo/line';
 import { nivoThemes } from '../theme.ts';
 import { useColorMode } from '@chakra-ui/system';
 import { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box } from '@chakra-ui/react';
 import dayjs from 'dayjs';
 import { generatePriceBands, AnalysisFormData, priceBandLabels, PriceBandTypes, DailyPriceDatum } from '../calc.ts';
-import { formatCurrency, formatCurrencyWithCents } from '../utils.ts';
+import { formatCurrency, formatCurrencyForAxis, formatCurrencyWithCents } from '../utils.ts';
 import { linearGradientDef, Defs, useAnimatedPath, useMotionConfig } from '@nivo/core';
 import { area } from 'd3-shape';
 import { debounce } from 'lodash';
@@ -82,10 +82,12 @@ const PowerLawChart = ({
   const endDateDaysSinceGenesis = initialDaysSinceGenesis + getDaysFromStartDate(endDate);
 
   const [highestPriceInData, setHighestPriceInData] = useState(0);
+  const [lowestPriceInData, setLowestPriceInData] = useState(Number.MAX_VALUE);
 
   const data = useMemo((): readonly { id: string; color: string; data: Datum[] }[] => {
     const priceBands = generatePriceBands(startDate, endDate, dailyPriceData, chartSettings.useXLog, chartSettings.useXLog ? 500 : 900);
     let highestPrice = 0;
+    let lowestPrice = Number.MAX_VALUE;
     const data = (
       Object.entries(priceBands)
         .filter(([type]) => {
@@ -109,6 +111,9 @@ const PowerLawChart = ({
           data: data
             .map(d => {
               highestPrice = Math.max(highestPrice, d.price);
+              if (d.price > 0) {
+                lowestPrice = Math.min(lowestPrice, d.price);
+              }
               return chartSettings.useXLog
                 ? {
                   x: initialDaysSinceGenesis + getDaysFromStartDate(new Date(d.date)),
@@ -123,6 +128,7 @@ const PowerLawChart = ({
         }))
     );
     setHighestPriceInData(highestPrice);
+    setLowestPriceInData(Math.max(lowestPrice, 0.01));
     return data;
   }, [
     dailyPriceData,
@@ -142,15 +148,15 @@ const PowerLawChart = ({
   }, [endDateDaysSinceGenesis, chartSettings.useXLog, endDate]);
 
   const minY = useMemo(() => {
-    return chartSettings.useYLog ? 0.01 : 0;
-  }, [chartSettings.useYLog]);
+    return chartSettings.useYLog ? lowestPriceInData : 0;
+  }, [chartSettings.useYLog, lowestPriceInData]);
 
   const maxY = useMemo(() => {
     return chartSettings.useYLog ? highestPriceInData : 'auto';
   }, [chartSettings.useYLog, highestPriceInData]);
 
   const sliceTooltip = useCallback(
-    ({ slice }: SliceTooltipProps<ComputedSeries<Datum>>) => {
+    ({ slice }: SliceTooltipProps<{ id: string; color: string; data: Datum[] }>) => {
       const xFormatted = slice.points[0].data.xFormatted;
       const seenLabels = new Set<PriceBandTypes>();
       return (
@@ -179,15 +185,15 @@ const PowerLawChart = ({
                 }}
               >
                 {`${dayjs(genesis)
-                  .add(xFormatted as number, 'day')
-                  .format('D, MMM YYYY')}`}
+                  .add(Number(xFormatted), 'day')
+                  .format('MMM D, YYYY')}`}
               </span>
             )}
           </div>
           {Array.prototype.sort
-            .call(slice.points, (p1: Point<Datum>, p2: Point<Datum>) => (p1.data.y < p2.data.y ? 1 : -1))
-            .filter((p: Point<Datum>) => p.data.xFormatted === xFormatted)
-            .map((point: Point<Datum>): ReactElement | undefined => {
+            .call(slice.points, (p1: any, p2: any) => (p1.data.y < p2.data.y ? 1 : -1))
+            .filter((p: any) => p.data.xFormatted === xFormatted)
+            .map((point: any): ReactElement | undefined => {
               const price = point.data.y as number;
               if (seenLabels.has(point.seriesId as PriceBandTypes)) { // overlapping point fix
                 return undefined;
@@ -411,11 +417,21 @@ const PowerLawChart = ({
     }
   }, [endDate, isScrolling, parameters, startDate]);
 
+  const middleLogValues = useMemo(() => {
+    const values = [];
+    for (let i = 1; i < 10; i++) {
+      const val = Math.pow(10, i);
+      if (val > lowestPriceInData && val < highestPriceInData) {
+        values.push(val);
+      }
+    }
+    return values;
+  }, [highestPriceInData, lowestPriceInData]);
 
   return (
-
     <Box
-      height={450}
+      height={'calc(100vh - 250px)'}
+      minHeight={350}
       style={{ touchAction: 'none', overflow: 'visible' }}
       minW={0}
       width={'auto'}
@@ -427,10 +443,11 @@ const PowerLawChart = ({
         colors={{
           datum: 'color'
         }}
-        margin={{ top: 10, right: 1, bottom: 40, left: 40 }}
-        theme={nivoThemes[colorMode]}
+        margin={{ top: 20, right: 1, bottom: 40, left: 40 }}
+        // @ts-ignore
+        theme={{ ...nivoThemes[colorMode], tooltip: { zIndex: 10000 } }}
         crosshairType="x"
-        xFormat={chartSettings.useXLog ? '.0f' : 'time:%d, %b %Y'}
+        xFormat={chartSettings.useXLog ? '.0f' : 'time:%b %d, %Y'}
         yFormat=" >-$,.0f"
         xScale={{
           type: chartSettings.useXLog ? 'log' : 'linear',
@@ -454,9 +471,9 @@ const PowerLawChart = ({
           legendPosition: 'middle'
         }}
         axisLeft={{
-          format: '>-$,.1s',
+          format: (d: number) => formatCurrencyForAxis(d),
           tickPadding: 5,
-          tickValues: chartSettings.useYLog ? [1, 1000, 1000000, 1000000000] : 5,
+          tickValues: chartSettings.useYLog ? [lowestPriceInData, ...middleLogValues, highestPriceInData] : 5,
           legendOffset: 0,
           legendPosition: 'middle'
         }}

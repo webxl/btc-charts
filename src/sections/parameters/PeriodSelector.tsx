@@ -1,4 +1,4 @@
-import { Box, Button,  HStack } from '@chakra-ui/react';
+import { Box, Button, Tooltip,  HStack } from '@chakra-ui/react';
 import { useCallback, useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { Label } from './inputs';
@@ -32,9 +32,14 @@ export const PeriodSelector = ({
       <Label label={'Period'} />
       <HStack>
         {periods.map((period) => (
-        <Button key={period} onClick={() => handlePeriodChange(period)} variant={selectedPeriod === period ? 'solid' : 'outline'} isDisabled={isDisabled}>
-          {period !== Infinity ? `${period}y` : 'All'}
-        </Button>
+          <Tooltip
+            key={period}
+            label={period !== Infinity ? period === 1 ? 'Last year' : ` Last ${period} years` : 'All available price data'}
+          >
+            <Button onClick={() => handlePeriodChange(period)} variant={selectedPeriod === period ? 'solid' : 'outline'} isDisabled={isDisabled}>
+              {period !== Infinity ? `${period}y` : 'All'}
+            </Button>
+          </Tooltip>
         ))}
       </HStack>
     </Box>
