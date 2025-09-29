@@ -95,11 +95,11 @@ export function generatePriceBands(
   // https://www.porkopolis.io/thechart/ a=1.39e-17 b=5.79
   // https://www.desmos.com/calculator/y9lg886azr
 
-  const c = -38.122;
-  const m = 5.704;
+  const c = -38.16;
+  const m = 5.71;
 
   const intercept = 2.777e-17; // ~= Math.exp(c)
-  const slope = 5.704;
+  const slope = 5.71;
   const std_residuals = 0.7305045048910941;
 
   const start = dayjs(startDate);

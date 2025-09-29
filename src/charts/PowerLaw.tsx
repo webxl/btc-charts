@@ -151,6 +151,7 @@ const PowerLawChart = ({
   const sliceTooltip = useCallback(
     ({ slice }: SliceTooltipProps) => {
       const xFormatted = slice.points[0].data.xFormatted;
+      const seenLabels = new Set<PriceBandTypes>();
       return (
         <div
           style={{
@@ -185,8 +186,12 @@ const PowerLawChart = ({
           {Array.prototype.sort
             .call(slice.points, (p1: Point, p2: Point) => (p1.data.y < p2.data.y ? 1 : -1))
             .filter((p: Point) => p.data.xFormatted === xFormatted)
-            .map((point: Point): ReactElement => {
+            .map((point: Point): ReactElement | undefined => {
               const price = point.data.y as number;
+              if (seenLabels.has(point.serieId as PriceBandTypes)) { // overlapping point fix
+                return undefined;
+              }
+              seenLabels.add(point.serieId as PriceBandTypes);
               return (
                 <div
                   key={point.id}
