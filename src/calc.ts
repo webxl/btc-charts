@@ -156,12 +156,11 @@ export function generatePriceBands(
 
   function populateBands(currentDate: dayjs.Dayjs, xDays: number) {
     const dailyPriceIndex = currentDate.diff(firstPriceDate, 'day');
-    priceBands.price.push(
-      dailyPriceData[dailyPriceIndex] || {
+    const historicalPrice = dailyPriceData[dailyPriceIndex];
+    priceBands.price.push({
         date: currentDate.format('YYYY-MM-DD'),
-        price: null
-      }
-    );
+        price: historicalPrice?.price || 0
+    });
     priceBands.posTwoSigma.push({
       date: currentDate.format('YYYY-MM-DD'),
       price: getSigma(xDays, 2)
@@ -183,8 +182,7 @@ export function generatePriceBands(
       price: getSigma(xDays, -2)
     });
   }
-  // populateBands(start, 0);
-
+  
   for (let i = 0; i < numPoints; i++) {
     const dayOffset = Math.round(useXLog ? logScale(i) : linearScale(i));
     const currentDate = start.add(dayOffset, 'day');
