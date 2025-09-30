@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { ReactElement, useCallback, useEffect, useRef, useState } from 'react';
 import { formatCurrency, formatCurrencyWithCents, formatPercentage } from '../../utils.ts';
 import {
   Box,
@@ -385,10 +385,10 @@ export const CheckboxInput = ({
   );
 };
 
-export const Label = (props: { label: string; tooltip?: string; isDisabled?: boolean }) => {
+export const Label = (props: { label: string; tooltip?: ReactElement | string; isDisabled?: boolean }) => {
   return (
     <FormLabel mr={0}>
-      <HStack justifyContent={'space-between'}>
+      <HStack >
         <Text
           color={props.isDisabled ? '#888' : 'inherit'}
           fontSize={'.9em'}
@@ -398,7 +398,7 @@ export const Label = (props: { label: string; tooltip?: string; isDisabled?: boo
         </Text>
         {props.tooltip && (
           <Tooltip label={props.tooltip}>
-            <Icon as={Info} ml={1} mr={'6px'} color={'#888'} />
+            <Icon as={Info} ml={1} mr={'6px'} color={'#888'} cursor={'help'} />
           </Tooltip>
         )}
       </HStack>

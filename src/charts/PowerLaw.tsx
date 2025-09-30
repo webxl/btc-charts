@@ -155,12 +155,15 @@ const PowerLawChart = ({
     return chartSettings.useYLog ? highestPriceInData : 'auto';
   }, [chartSettings.useYLog, highestPriceInData]);
 
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
   const sliceTooltip = useCallback(
     ({ slice }: SliceTooltipProps<{ id: string; color: string; data: Datum[] }>) => {
       const xFormatted = slice.points[0].data.xFormatted;
       const seenLabels = new Set<PriceBandTypes>();
       return (
         <div
+          ref={tooltipRef}
           style={{
             background: colorMode === 'dark' ? '#333' : '#fff',
             padding: '9px 12px',
@@ -246,25 +249,36 @@ const PowerLawChart = ({
   );
 
   const AreaLayer = ({ series, xScale, yScale, innerHeight }: any) => {
-    const getArea = (lowerBound: readonly any[]) =>
-      area<any>()
+    const getArea = (lowerBound: readonly any[], upperBound: readonly any[]) => {
+      // Ensure both bounds have the same length and valid data
+      const minLength = Math.min(lowerBound.length, upperBound.length);
+      if (minLength === 0) return null;
+      
+      return area<any>()
         .x((d: any) => (typeof xScale === 'function' ? xScale(Number(d.data.x)) : 0))
         .y0((d: any) => {
           const y = Number(d.data.y);
           return chartSettings.useYLog && y <= 0 ? innerHeight : (typeof yScale === 'function' ? yScale(y) : 0) ?? 0;
         })
         .y1((_d: any, i: number) => {
+          // Ensure we don't go out of bounds
+          if (i >= lowerBound.length) return innerHeight;
           const y = Number(lowerBound[i].data.y);
           return chartSettings.useYLog && y <= 0 ? innerHeight : (typeof yScale === 'function' ? yScale(y) : 0) ?? 0;
         });
+    };
 
     const lowerOuterBound = (series as readonly any[]).find((s) => s.id === PriceBandTypes.negTwoSigma)?.data ?? [];
     const upperOuterBound = (series as readonly any[]).find((s) => s.id === PriceBandTypes.posTwoSigma)?.data ?? [];
     const lowerInnerBound = (series as readonly any[]).find((s) => s.id === PriceBandTypes.negOneSigma)?.data ?? [];
     const upperInnerBound = (series as readonly any[]).find((s) => s.id === PriceBandTypes.posOneSigma)?.data ?? [];
 
-    const outerBand = chartSettings.showOuterBand ? getArea(lowerOuterBound)(upperOuterBound) : null;
-    const innerBand = chartSettings.showInnerBand ? getArea(lowerInnerBound)(upperInnerBound) : null;
+    const outerBand = chartSettings.showOuterBand && lowerOuterBound.length > 0 && upperOuterBound.length > 0 
+      ? getArea(lowerOuterBound, upperOuterBound)?.(upperOuterBound) 
+      : null;
+    const innerBand = chartSettings.showInnerBand && lowerInnerBound.length > 0 && upperInnerBound.length > 0 
+      ? getArea(lowerInnerBound, upperInnerBound)?.(upperInnerBound) 
+      : null;
 
     return (
       <>
@@ -316,6 +330,12 @@ const PowerLawChart = ({
   const lastDeltaXRef = useRef<number | null>(null);
   const lastDeltaYRef = useRef<number | null>(null);
 
+  // Drag selection state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState<{ x: number; date: Date } | null>(null);
+  const [dragEnd, setDragEnd] = useState<{ x: number; date: Date } | null>(null);
+  const chartContainerRef = useRef<HTMLDivElement>(null);
+
   const debouncedZoomEnd = useMemo(
     () =>
       debounce(() => {
@@ -326,8 +346,32 @@ const PowerLawChart = ({
     []
   );
 
+  // Convert mouse X position to date
+  const mouseXToDate = useCallback((mouseX: number): Date => {
+    const container = chartContainerRef.current;
+    if (!container) return startDate;
+    
+    const rect = container.getBoundingClientRect();
+    const chartWidth = rect.width - 41; // Account for left margin (40px + 1px)
+    const relativeX = mouseX - rect.left - 40; // Subtract left margin
+    const normalizedX = Math.max(0, Math.min(1, relativeX / chartWidth));
+    
+    if (chartSettings.useXLog) {
+      const xRange = endDateDaysSinceGenesis - initialDaysSinceGenesis;
+      const daysSinceGenesis = initialDaysSinceGenesis + (normalizedX * xRange);
+      return dayjs(genesis).add(daysSinceGenesis, 'day').toDate();
+    } else {
+      const timeRange = endDate.getTime() - startDate.getTime();
+      const timestamp = startDate.getTime() + (normalizedX * timeRange);
+      return new Date(timestamp);
+    }
+  }, [startDate, endDate, chartSettings.useXLog, initialDaysSinceGenesis, endDateDaysSinceGenesis, genesis]);
+
   const handleScroll = useCallback(
     (e: WheelEvent) => {
+      // Don't scroll if dragging
+      if (isDragging) return;
+      
       e.preventDefault();
       e.stopPropagation();
 
@@ -388,9 +432,92 @@ const PowerLawChart = ({
       );
       debouncedZoomEnd();
     },
-    [isScrolling, endDate, startDate, onDateRangeAdjusted, debouncedZoomEnd]
+    [isScrolling, endDate, startDate, onDateRangeAdjusted, debouncedZoomEnd, isDragging]
   );
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Mouse event handlers for drag selection
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // Only start drag on left mouse button
+    if (e.button !== 0) return;
+    
+    const date = mouseXToDate(e.clientX);
+    const container = chartContainerRef.current;
+    if (!container) return;
+    
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    
+    setIsDragging(true);
+    if (tooltipRef.current) {
+      tooltipRef.current.style.display = 'none';
+    }
+    setDragStart({ x, date });
+    setDragEnd({ x, date });
+    
+    // Prevent text selection
+    e.preventDefault();
+  }, [mouseXToDate]);
+
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    if (!isDragging || !dragStart) return;
+    
+    const date = mouseXToDate(e.clientX);
+    const container = chartContainerRef.current;
+    if (!container) return;
+    
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    
+    setDragEnd({ x, date });
+  }, [isDragging, dragStart, mouseXToDate]);
+
+  const handleMouseUp = useCallback(() => {
+    if (!isDragging || !dragStart || !dragEnd) {
+      setIsDragging(false);
+      setDragStart(null);
+      setDragEnd(null);
+      if (tooltipRef.current) {
+        tooltipRef.current.style.display = 'block';
+      }
+      return;
+    }
+    
+    // Determine start and end dates (handle dragging in either direction)
+    const startDateForRange = dragStart.date < dragEnd.date ? dragStart.date : dragEnd.date;
+    const endDateForRange = dragStart.date < dragEnd.date ? dragEnd.date : dragStart.date;
+    
+    // Only update if there's a meaningful selection (more than 1 day difference)
+    const daysDiff = Math.abs(dayjs(endDateForRange).diff(startDateForRange, 'day'));
+    if (daysDiff > 1) {
+      setStartDate(startDateForRange);
+      setEndDate(endDateForRange);
+      onDateRangeAdjusted(
+        dayjs(startDateForRange).format('YYYY-MM-DD'),
+        dayjs(endDateForRange).format('YYYY-MM-DD')
+      );
+    }
+    
+    // Reset drag state
+    setIsDragging(false);
+    setDragStart(null);
+    setDragEnd(null);
+    if (tooltipRef.current) {
+      tooltipRef.current.style.display = 'block';
+    }
+  }, [isDragging, dragStart, dragEnd, onDateRangeAdjusted]);
+
+  // Global mouse up handler to handle mouse up outside the chart
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      if (isDragging) {
+        handleMouseUp();
+      }
+    };
+    
+    document.addEventListener('mouseup', handleGlobalMouseUp);
+    return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
+  }, [isDragging, handleMouseUp]);
 
   useEffect(() => {
     const currentContainer = containerRef.current;
@@ -428,85 +555,119 @@ const PowerLawChart = ({
     return values;
   }, [highestPriceInData, lowestPriceInData]);
 
+  // Selection overlay component
+  const SelectionOverlay = () => {
+    if (!isDragging || !dragStart || !dragEnd) return null;
+    
+    const left = Math.min(dragStart.x, dragEnd.x);
+    const width = Math.abs(dragEnd.x - dragStart.x);
+    
+    return (
+      <div
+        style={{
+          position: 'absolute',
+          left: `${left}px`,
+          top: '20px', // Match chart margin top
+          width: `${width}px`,
+          height: 'calc(100% - 60px)', // Account for top and bottom margins
+          backgroundColor: 'rgba(249, 115, 22, 0.2)',
+          pointerEvents: 'none',
+          zIndex: 1000
+        }}
+      />
+    );
+  };
+
   return (
     <Box
       height={'calc(100vh - 250px)'}
       minHeight={350}
-      style={{ touchAction: 'none', overflow: 'visible' }}
+      style={{ 
+        touchAction: 'none', 
+        overflow: 'visible',
+        position: 'relative',
+        cursor: isDragging ? 'col-resize' : 'crosshair'
+      }}
       minW={0}
       width={'auto'}
       ref={containerRef}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
     >
-      <ResponsiveLine
-        animate={!isScrolling}
-        data={data}
-        colors={{
-          datum: 'color'
-        }}
-        margin={{ top: 20, right: 1, bottom: 40, left: 40 }}
-        // @ts-ignore
-        theme={{ ...nivoThemes[colorMode], tooltip: { zIndex: 10000 } }}
-        crosshairType="x"
-        xFormat={chartSettings.useXLog ? '.0f' : 'time:%b %d, %Y'}
-        yFormat=" >-$,.0f"
-        xScale={{
-          type: chartSettings.useXLog ? 'log' : 'linear',
-          min: minX,
-          max: maxX,
-          nice: false
-        }}
-        gridXValues={[]}
-        yScale={{
-          type: chartSettings.useYLog ? 'log' : 'linear',
-          min: minY,
-          max: maxY,
-          nice: false
-        }}
-        gridYValues={chartSettings.useYLog ? [1, 1000, 1000000, 1000000000] : []}
-        axisBottom={{
-          format: chartSettings.useXLog ? '.0f' : (d: Date) => dayjs(d).format('MMM YYYY'),
-          tickPadding: 5,
-          tickRotation: -35,
-          legendOffset: 0,
-          legendPosition: 'middle'
-        }}
-        axisLeft={{
-          format: (d: number) => formatCurrencyForAxis(d),
-          tickPadding: 5,
-          tickValues: chartSettings.useYLog ? [lowestPriceInData, ...middleLogValues, highestPriceInData] : 5,
-          legendOffset: 0,
-          legendPosition: 'middle'
-        }}
-        pointSize={0}
-        pointBorderWidth={1}
-        pointBorderColor={{
-          from: 'color',
-          modifiers: [['darker', 0.3]]
-        }}
-        enableTouchCrosshair={true}
-        enableSlices="x"
-        sliceTooltip={sliceTooltip}
-        defs={[
-          linearGradientDef('gradientA', [
-            { offset: 0, color: 'inherit' },
-            { offset: 100, color: 'inherit', opacity: 0 }
-          ])
-        ]}
-        fill={[{ match: '*', id: 'gradientA' }]}
-        legends={[]}
-        layers={[
-          'grid',
-          'areas',
-          AreaLayer,
-          'axes',
-          'crosshair',
-          'lines',
-          'markers',
-          'legends',
-          'slices',
-          'mesh'
-        ]}
-      />
+      <div ref={chartContainerRef} style={{ position: 'relative', height: '100%', width: '100%' }}>
+        <SelectionOverlay />
+        <ResponsiveLine
+          animate={!isScrolling}
+          data={data}
+          colors={{
+            datum: 'color'
+          }}
+          margin={{ top: 20, right: 1, bottom: 40, left: 40 }}
+          // @ts-ignore
+          theme={{ ...nivoThemes[colorMode], tooltip: { zIndex: 10000 } }}
+          crosshairType="x"
+          xFormat={chartSettings.useXLog ? '.0f' : 'time:%b %d, %Y'}
+          yFormat=" >-$,.0f"
+          xScale={{
+            type: chartSettings.useXLog ? 'log' : 'linear',
+            min: minX,
+            max: maxX,
+            nice: false
+          }}
+          gridXValues={[]}
+          yScale={{
+            type: chartSettings.useYLog ? 'log' : 'linear',
+            min: minY,
+            max: maxY,
+            nice: false
+          }}
+          gridYValues={chartSettings.useYLog ? [1, 1000, 1000000, 1000000000] : []}
+          axisBottom={{
+            format: chartSettings.useXLog ? '.0f' : (d: Date) => dayjs(d).format('MMM YYYY'),
+            tickPadding: 5,
+            tickRotation: -35,
+            legendOffset: 0,
+            legendPosition: 'middle'
+          }}
+          axisLeft={{
+            format: (d: number) => formatCurrencyForAxis(d),
+            tickPadding: 5,
+            tickValues: chartSettings.useYLog ? [lowestPriceInData, ...middleLogValues, highestPriceInData] : 5,
+            legendOffset: 0,
+            legendPosition: 'middle'
+          }}
+          pointSize={0}
+          pointBorderWidth={1}
+          pointBorderColor={{
+            from: 'color',
+            modifiers: [['darker', 0.3]]
+          }}
+          enableTouchCrosshair={!isDragging}
+          enableSlices={isDragging ? false : "x"}
+          sliceTooltip={sliceTooltip}
+          defs={[
+            linearGradientDef('gradientA', [
+              { offset: 0, color: 'inherit' },
+              { offset: 100, color: 'inherit', opacity: 0 }
+            ])
+          ]}
+          fill={[{ match: '*', id: 'gradientA' }]}
+          legends={[]}
+          layers={[
+            'grid',
+            'areas',
+            AreaLayer,
+            'axes',
+            'crosshair',
+            'lines',
+            'markers',
+            'legends',
+            'slices',
+            'mesh'
+          ]}
+        />
+      </div>
     </Box>
   );
 };

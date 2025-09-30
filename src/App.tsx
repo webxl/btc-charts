@@ -32,9 +32,11 @@ import { ChartSettings } from './charts/ChartControls.tsx';
 
 dayjs.extend(LocalizedFormat);
 
-const initialState = {
+const initialState: AnalysisFormData = {
   analysisStart: '2010-07-18',
-  analysisEnd: dayjs().format('YYYY-MM-DD')
+  analysisEnd: dayjs().format('YYYY-MM-DD'),
+  dataStart: '2010-07-18',
+  dataEnd: dayjs().format('YYYY-MM-DD')
 };
 
 const initialChartSettings = {
@@ -87,7 +89,8 @@ function App() {
 
   const [parameters, setParameters] = useState<AnalysisFormData>(() => {
     const savedState = localStorage.getItem('parameters');
-    return savedState ? (JSON.parse(savedState) as AnalysisFormData) : initialState;
+    const parsedState = {...initialState, ...savedState ? (JSON.parse(savedState) as AnalysisFormData) : {}};
+    return parsedState;
   });
   const [chartSettings, setChartSettings] = useState<ChartSettings>(() => {
     const savedState = localStorage.getItem('chartSettings');
@@ -160,7 +163,12 @@ function App() {
 
     const onDateRangeAdjusted = useCallback(
       (startDate: string, endDate: string) => {
-        handleParameterUpdate({ analysisStart: startDate, analysisEnd: endDate });
+        handleParameterUpdate({ 
+          analysisStart: startDate, 
+          analysisEnd: endDate,
+          dataStart: startDate,
+          dataEnd: endDate
+        });
       },
       [handleParameterUpdate]
     );

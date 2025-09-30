@@ -109,6 +109,8 @@ const Parameters = ({
         onChange={handlePeriodChange}
         analysisStart={state.analysisStart}
         analysisEnd={state.analysisEnd}
+        dataStart={state.dataStart}
+        dataEnd={state.dataEnd}
         isDisabled={isLoading}
       />
 

@@ -272,11 +272,31 @@ const config = {
   initialColorMode: 'dark',
   fonts: {
     heading: `'Brawler',  sans-serif`,
-    body: `'Roboto', sans-serif`
+    body: `'Roboto', sans-serif`,
+    code: `'Roboto Mono', monospace`
   },
   components: {
     Checkbox: checkboxTheme,
-    Alert: alertTheme
+    Alert: alertTheme,
+    Tooltip: {
+      baseStyle: {
+        bg: 'gray.700',
+        borderColor: 'white',
+        borderWidth: 1,
+        color: 'white',
+        borderRadius: 'md',
+        px: 2,
+        py: 1,
+        fontSize: 'sm',
+        maxW: '320px',
+        wordWrap: 'break-word',
+        marginLeft: '10px'
+      },
+      defaultProps: {
+        placement: 'auto',
+        offset: [0, 8]
+      }
+    }
   }
 };
 

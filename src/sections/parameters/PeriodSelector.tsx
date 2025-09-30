@@ -7,17 +7,26 @@ export const PeriodSelector = ({
   onChange,
   analysisStart,
   analysisEnd,
+  dataStart,
+  dataEnd,
   isDisabled
 }: {
   onChange: (period: number) => void;
   analysisStart: string;
   analysisEnd: string;
+  dataStart: string;
+  dataEnd: string;
   isDisabled: boolean;
 }) => {
-  const periods = [1, 5, 10, Infinity];
+  const maxPeriod = dayjs(dataEnd).diff(dataStart, 'year');
+  const periods = [1, 5, 10, maxPeriod];
   const [selectedPeriod, setSelectedPeriod] = useState(1);
   const handlePeriodChange = useCallback((period: number) => {
-    onChange(period);
+    if (maxPeriod === period) {
+      onChange(Infinity);
+    } else {
+      onChange(period);
+    }
   }, [onChange]);
 
   useEffect(() => {
@@ -25,8 +34,9 @@ export const PeriodSelector = ({
       const period = dayjs(analysisEnd).diff(analysisStart, 'year');
       setSelectedPeriod(period);
     }
-  }, [analysisStart, analysisEnd, onChange]);
+  }, [analysisStart, analysisEnd]);
 
+  console.log('selectedPeriod', selectedPeriod, maxPeriod);
   return (
     <Box>
       <Label label={'Period'} />
@@ -34,10 +44,10 @@ export const PeriodSelector = ({
         {periods.map((period) => (
           <Tooltip
             key={period}
-            label={period !== Infinity ? period === 1 ? 'Last year' : ` Last ${period} years` : 'All available price data'}
+            label={period !== maxPeriod ? period === 1 ? 'Last year' : ` Last ${period} years` : 'All available price data'}
           >
             <Button onClick={() => handlePeriodChange(period)} variant={selectedPeriod === period ? 'solid' : 'outline'} isDisabled={isDisabled}>
-              {period !== Infinity ? `${period}y` : 'All'}
+              {period !== maxPeriod ? `${period}y` : 'All'}
             </Button>
           </Tooltip>
         ))}

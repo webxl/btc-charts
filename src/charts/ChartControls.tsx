@@ -1,6 +1,7 @@
 import { Button, FormControl, HStack, VStack } from '@chakra-ui/react';
 import { Label } from '../sections/parameters/inputs';
 import { useCallback } from 'react';
+import { powerLawIntercept, powerLawSlope } from '../const';
 
 export type ChartSettings = {
   useXLog: boolean;
@@ -42,7 +43,13 @@ const ChartControls = ({
     </FormControl>
     </HStack>
     <FormControl>
-      <Label label='Power Law' />
+      <Label label='Power Law' tooltip={
+        <>
+          Toggles the power law plot. When enabled, a power law regression line is plotted using{' '}
+          <code style={{ fontSize: '12px'}}>{powerLawIntercept}</code> for the intercept coefficient (a) and{' '}
+          <code style={{ fontSize: '12px'}}>{powerLawSlope}</code> for the slope coefficient (b).
+        </>
+      }/>
       <Button onClick={() => toggleSetting('showPowerLawPlot')} isDisabled={isLoading}>
         {chartSettings.showPowerLawPlot ? 'Hide' : 'Show'}
       </Button>
