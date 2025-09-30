@@ -18,7 +18,6 @@ lerna-debug.log*
 node_modules
 dist
 dist-ssr
-*.local
 
 # Editor directories and files
 .vscode/*
@@ -35,3 +34,6 @@ env
 api/__pycache__
 api/bitcoin_prices.db
 .vercel
+.env.development.local
+.env.local
+.env.prod
