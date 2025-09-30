@@ -36,7 +36,6 @@ export const PeriodSelector = ({
     }
   }, [analysisStart, analysisEnd]);
 
-  console.log('selectedPeriod', selectedPeriod, maxPeriod);
   return (
     <Box>
       <Label label={'Period'} />

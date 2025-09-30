@@ -3,8 +3,8 @@ import { powerLawIntercept, powerLawSlope, powerLawStdResiduals } from './const'
 export type AnalysisFormData = {
   analysisStart: string;
   analysisEnd: string;
-  dataStart: string;
-  dataEnd: string;
+  dataStart?: string;
+  dataEnd?: string;
 };
 
 export type DailyPriceDatum = {

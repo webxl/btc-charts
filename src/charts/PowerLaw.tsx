@@ -85,7 +85,7 @@ const PowerLawChart = ({
   const [lowestPriceInData, setLowestPriceInData] = useState(Number.MAX_VALUE);
 
   const data = useMemo((): readonly { id: string; color: string; data: Datum[] }[] => {
-    const priceBands = generatePriceBands(startDate, endDate, dailyPriceData, chartSettings.useXLog, chartSettings.useXLog ? 500 : 900);
+    const priceBands = generatePriceBands(startDate, endDate, dailyPriceData, chartSettings.useXLog, 800);
     let highestPrice = 0;
     let lowestPrice = Number.MAX_VALUE;
     const data = (
@@ -161,23 +161,23 @@ const PowerLawChart = ({
     ({ slice }: SliceTooltipProps<{ id: string; color: string; data: Datum[] }>) => {
       const xFormatted = slice.points[0].data.xFormatted;
       const seenLabels = new Set<PriceBandTypes>();
+      const allYValuesUnder1000 = slice.points.every(p => p.data.y !== null && p.data.y < 1000);
       return (
-        <div
+        <Box
           ref={tooltipRef}
-          style={{
-            background: colorMode === 'dark' ? '#333' : '#fff',
-            padding: '9px 12px',
-            border: '1px solid #ccc',
-            fontSize: '10pt'
-          }}
+          background={colorMode === 'dark' ? '#1A202Ccc' : 'whiteAlpha.600'}
+          padding="9px 12px"
+          border="1px solid"
+          borderColor={colorMode === 'dark' ? 'white.alpha.300' : 'black.alpha.300'}
+          borderRadius="md"
+          fontSize="10pt"
+          transition="opacity 0.3s ease-in-out"
         >
           <div
             style={{
               display: 'flex',
               justifyContent: 'space-between',
-              marginBottom: '20px',
-              borderBottom: '1px solid',
-              borderColor: colorMode === 'dark' ? '#ccc' : '#333'
+              marginBottom: '10px',
             }}
           >
             {chartSettings.useXLog ? 'Day ' : ''} {xFormatted}
@@ -237,12 +237,12 @@ const PowerLawChart = ({
                     }}
                   >
                     {' '}
-                    {price > 10000 ? formatCurrency(price) : formatCurrencyWithCents(price)}
+                    {allYValuesUnder1000 ? formatCurrencyWithCents(price) : formatCurrency(price)}
                   </div>
                 </div>
               );
             })}{' '}
-        </div>
+        </Box>
       );
     },
     [colorMode, genesis, chartSettings.useXLog]
@@ -251,21 +251,38 @@ const PowerLawChart = ({
   const AreaLayer = ({ series, xScale, yScale, innerHeight }: any) => {
     const getArea = (lowerBound: readonly any[], upperBound: readonly any[]) => {
       // Ensure both bounds have the same length and valid data
+      if (!lowerBound || !upperBound || lowerBound.length === 0 || upperBound.length === 0) {
+        return null;
+      }
+      
+      // Ensure both arrays have the same length by using the minimum length
       const minLength = Math.min(lowerBound.length, upperBound.length);
-      if (minLength === 0) return null;
+      const trimmedUpper = upperBound.slice(0, minLength);
+      const trimmedLower = lowerBound.slice(0, minLength);
       
       return area<any>()
-        .x((d: any) => (typeof xScale === 'function' ? xScale(Number(d.data.x)) : 0))
+        .defined((d: any, i: number) => {
+          // Only draw area if both bounds have valid data at this index
+          return i < trimmedLower.length && 
+                 d.data.y !== null && 
+                 trimmedLower[i].data.y !== null &&
+                 (!chartSettings.useYLog || (d.data.y > 0 && trimmedLower[i].data.y > 0));
+        })
+        .x((d: any) => {
+          const xVal = Number(d.data.x);
+          return typeof xScale === 'function' ? xScale(xVal) : 0;
+        })
         .y0((d: any) => {
           const y = Number(d.data.y);
-          return chartSettings.useYLog && y <= 0 ? innerHeight : (typeof yScale === 'function' ? yScale(y) : 0) ?? 0;
+          if (y === null || (chartSettings.useYLog && y <= 0)) return innerHeight;
+          return typeof yScale === 'function' ? yScale(y) : 0;
         })
         .y1((_d: any, i: number) => {
-          // Ensure we don't go out of bounds
-          if (i >= lowerBound.length) return innerHeight;
-          const y = Number(lowerBound[i].data.y);
-          return chartSettings.useYLog && y <= 0 ? innerHeight : (typeof yScale === 'function' ? yScale(y) : 0) ?? 0;
-        });
+          if (i >= trimmedLower.length) return innerHeight;
+          const y = Number(trimmedLower[i].data.y);
+          if (y === null || (chartSettings.useYLog && y <= 0)) return innerHeight;
+          return typeof yScale === 'function' ? yScale(y) : 0;
+        })(trimmedUpper);
     };
 
     const lowerOuterBound = (series as readonly any[]).find((s) => s.id === PriceBandTypes.negTwoSigma)?.data ?? [];
@@ -273,12 +290,8 @@ const PowerLawChart = ({
     const lowerInnerBound = (series as readonly any[]).find((s) => s.id === PriceBandTypes.negOneSigma)?.data ?? [];
     const upperInnerBound = (series as readonly any[]).find((s) => s.id === PriceBandTypes.posOneSigma)?.data ?? [];
 
-    const outerBand = chartSettings.showOuterBand && lowerOuterBound.length > 0 && upperOuterBound.length > 0 
-      ? getArea(lowerOuterBound, upperOuterBound)?.(upperOuterBound) 
-      : null;
-    const innerBand = chartSettings.showInnerBand && lowerInnerBound.length > 0 && upperInnerBound.length > 0 
-      ? getArea(lowerInnerBound, upperInnerBound)?.(upperInnerBound) 
-      : null;
+    const outerBand = chartSettings.showOuterBand ? getArea(lowerOuterBound, upperOuterBound) : null;
+    const innerBand = chartSettings.showInnerBand ? getArea(lowerInnerBound, upperInnerBound) : null;
 
     return (
       <>
@@ -449,9 +462,6 @@ const PowerLawChart = ({
     const x = e.clientX - rect.left;
     
     setIsDragging(true);
-    if (tooltipRef.current) {
-      tooltipRef.current.style.display = 'none';
-    }
     setDragStart({ x, date });
     setDragEnd({ x, date });
     
@@ -477,9 +487,6 @@ const PowerLawChart = ({
       setIsDragging(false);
       setDragStart(null);
       setDragEnd(null);
-      if (tooltipRef.current) {
-        tooltipRef.current.style.display = 'block';
-      }
       return;
     }
     
@@ -487,9 +494,9 @@ const PowerLawChart = ({
     const startDateForRange = dragStart.date < dragEnd.date ? dragStart.date : dragEnd.date;
     const endDateForRange = dragStart.date < dragEnd.date ? dragEnd.date : dragStart.date;
     
-    // Only update if there's a meaningful selection (more than 1 day difference)
+    // Only update if there's a meaningful selection (more than 30 day difference)
     const daysDiff = Math.abs(dayjs(endDateForRange).diff(startDateForRange, 'day'));
-    if (daysDiff > 1) {
+    if (daysDiff > 30) {
       setStartDate(startDateForRange);
       setEndDate(endDateForRange);
       onDateRangeAdjusted(
@@ -502,9 +509,6 @@ const PowerLawChart = ({
     setIsDragging(false);
     setDragStart(null);
     setDragEnd(null);
-    if (tooltipRef.current) {
-      tooltipRef.current.style.display = 'block';
-    }
   }, [isDragging, dragStart, dragEnd, onDateRangeAdjusted]);
 
   // Global mouse up handler to handle mouse up outside the chart
@@ -544,6 +548,19 @@ const PowerLawChart = ({
     }
   }, [endDate, isScrolling, parameters, startDate]);
 
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    if (tooltipRef.current) {
+      const shouldHide = isDragging || isScrolling;
+      timeout = setTimeout(() => {
+        if (tooltipRef.current) {
+          tooltipRef.current.style.opacity = shouldHide ? '0' : '1';
+        }
+      }, shouldHide ? 0 : 300);
+    }
+    return () => clearTimeout(timeout);
+  }, [isDragging, isScrolling]);
+
   const middleLogValues = useMemo(() => {
     const values = [];
     for (let i = 1; i < 10; i++) {
@@ -561,7 +578,10 @@ const PowerLawChart = ({
     
     const left = Math.min(dragStart.x, dragEnd.x);
     const width = Math.abs(dragEnd.x - dragStart.x);
-    
+    const startDateForRange = dragStart.date < dragEnd.date ? dragStart.date : dragEnd.date;
+    const endDateForRange = dragStart.date < dragEnd.date ? dragEnd.date : dragStart.date;
+    const daysDiff = Math.abs(dayjs(endDateForRange).diff(startDateForRange, 'day'));
+    const validDateRange = daysDiff >= 30;
     return (
       <div
         style={{
@@ -570,13 +590,15 @@ const PowerLawChart = ({
           top: '20px', // Match chart margin top
           width: `${width}px`,
           height: 'calc(100% - 60px)', // Account for top and bottom margins
-          backgroundColor: 'rgba(249, 115, 22, 0.2)',
+          backgroundColor: validDateRange ? 'rgba(249, 115, 22, 0.3)' : 'rgba(249, 115, 22, 0.1)',
           pointerEvents: 'none',
           zIndex: 1000
         }}
       />
     );
   };
+
+  const plotLength = data[0].data.length;
 
   return (
     <Box
@@ -624,7 +646,7 @@ const PowerLawChart = ({
           }}
           gridYValues={chartSettings.useYLog ? [1, 1000, 1000000, 1000000000] : []}
           axisBottom={{
-            format: chartSettings.useXLog ? '.0f' : (d: Date) => dayjs(d).format('MMM YYYY'),
+            format: chartSettings.useXLog ? '.0f' : (d: Date) => plotLength > 60 ? dayjs(d).format('MMM YYYY') : dayjs(d).format('M/DD/YY'),
             tickPadding: 5,
             tickRotation: -35,
             legendOffset: 0,
@@ -643,8 +665,8 @@ const PowerLawChart = ({
             from: 'color',
             modifiers: [['darker', 0.3]]
           }}
-          enableTouchCrosshair={!isDragging}
-          enableSlices={isDragging ? false : "x"}
+          enableTouchCrosshair={!isDragging && !isScrolling}
+          enableSlices={isDragging || isScrolling ? false : "x"}
           sliceTooltip={sliceTooltip}
           defs={[
             linearGradientDef('gradientA', [

@@ -165,9 +165,7 @@ function App() {
       (startDate: string, endDate: string) => {
         handleParameterUpdate({ 
           analysisStart: startDate, 
-          analysisEnd: endDate,
-          dataStart: startDate,
-          dataEnd: endDate
+          analysisEnd: endDate
         });
       },
       [handleParameterUpdate]

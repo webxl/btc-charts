@@ -147,8 +147,13 @@ const lightTheme: DefaultTheme = {
       outlineWidth: 2.5,
       outlineColor: '#ffffff',
       outlineOpacity: 0.35
-    }
-  }
+    } },
+    crosshair: {
+      line: {
+        strokeWidth: 1,
+        strokeDasharray: '1, 4'
+      }
+  },
 };
 
 const darkTheme: DefaultTheme = {
@@ -258,7 +263,8 @@ const darkTheme: DefaultTheme = {
   crosshair: {
     line: {
       stroke: '#b2bfcb',
-      strokeWidth: 1
+      strokeWidth: 1,
+      strokeDasharray: '1, 4'
     }
   }
 };

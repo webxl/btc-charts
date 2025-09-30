@@ -109,8 +109,8 @@ const Parameters = ({
         onChange={handlePeriodChange}
         analysisStart={state.analysisStart}
         analysisEnd={state.analysisEnd}
-        dataStart={state.dataStart}
-        dataEnd={state.dataEnd}
+        dataStart={state.dataStart || '2010-07-18'}
+        dataEnd={state.dataEnd || dayjs().format('YYYY-MM-DD')}
         isDisabled={isLoading}
       />
 
