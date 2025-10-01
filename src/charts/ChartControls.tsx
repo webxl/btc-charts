@@ -10,6 +10,7 @@ export type ChartSettings = {
   showOuterBand: boolean;
   showInnerBand: boolean;
   showPricePlot: boolean;
+  showHalvingEpochs: boolean;
 };
 
 const ChartControls = ({
@@ -70,6 +71,12 @@ const ChartControls = ({
       <Label label='Price' />
       <Button onClick={() => toggleSetting('showPricePlot')} isDisabled={isLoading}>
         {chartSettings.showPricePlot ? 'Hide' : 'Show'}
+      </Button>
+    </FormControl>
+    <FormControl>
+      <Label label='Halving Epochs' />
+      <Button onClick={() => toggleSetting('showHalvingEpochs')} isDisabled={isLoading}>
+        {chartSettings.showHalvingEpochs ? 'Hide' : 'Show'}
       </Button>
     </FormControl></>
     )}

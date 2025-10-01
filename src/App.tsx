@@ -39,13 +39,14 @@ const initialState: AnalysisFormData = {
   dataEnd: dayjs().format('YYYY-MM-DD')
 };
 
-const initialChartSettings = {
+const initialChartSettings: ChartSettings = {
   useXLog: false,
   useYLog: false,
   showPowerLawPlot: false,
   showOuterBand: false,
   showInnerBand: false,
-  showPricePlot: true
+  showPricePlot: true,
+  showHalvingEpochs: false
 };
 
 const apiUrl = (import.meta.env.VITE_API_URL as string) || '/api';
@@ -106,6 +107,7 @@ function App() {
   }, [colorMode, toggleColorMode]);
 
   const [retryCount, setRetryCount] = useState(5);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   useEffect(() => {
     fetchData(setdailyPriceData).then(() => setIsLoading(false)).catch(e => console.error(e));
@@ -125,6 +127,16 @@ function App() {
 
   }, [dailyPriceData, retryCount]);
 
+  const [seriesToggled, setSeriesToggled] = useState(false);
+
+  useEffect(() => {
+    if (!dailyPriceData.length) return;
+    setTimeout(() => {
+      setInitialLoad(false);
+      setSeriesToggled(false);
+    }, 2000);
+  }, [dailyPriceData, seriesToggled]);
+
   const breakpointValue = useBreakpointValue({
       base: 'base',
       md: 'md'
@@ -140,8 +152,11 @@ function App() {
 
     const handleChartSettingsChange = useCallback((settings: ChartSettings) => {
       localStorage.setItem('chartSettings', JSON.stringify(settings));
+      const seriesToggled = settings.showOuterBand !== chartSettings.showOuterBand ||
+        settings.showInnerBand !== chartSettings.showInnerBand;
+      setSeriesToggled(seriesToggled);
       setChartSettings(settings);
-    }, []);
+    }, [chartSettings]);
 
     useEffect(() => {
       const savedState = localStorage.getItem('parameters');
@@ -233,16 +248,17 @@ function App() {
               zIndex={1}
             >
               <VStack mt={0} px={2} pt={5} alignItems={'stretch'} 
-              zIndex={1}
+              zIndex={1} position={'relative'}
               >
-                {(isLoading || !dailyPriceData.length )? <Skeleton speed={2} height={400} width={'90%'} alignSelf={'center'} /> : (   
-                <PowerLawChart
-                  dailyPriceData={dailyPriceData}
-                  parameters={parameters}
-                  onDateRangeAdjusted={onDateRangeAdjusted}
+                {(isLoading || dailyPriceData.length === 0) ? <Skeleton speed={2} height="100%" width="100%" alignSelf={'center'} position={'absolute'} /> : <PowerLawChart
+                    dailyPriceData={dailyPriceData}
+                    parameters={parameters}
+                    onDateRangeAdjusted={onDateRangeAdjusted}
                     chartSettings={chartSettings}
+                    shouldAnimate={initialLoad || seriesToggled}
                   />
-                )}
+                }
+                
                 <VStack mt={14} w={'100%'} alignContent={'center'} gap={10}>
                   <Text fontSize={'xs'} maxW={760} textAlign={'center'} color={'gray.500'}>
                     This tool is for illustrative purposes only. It is not intended to provide

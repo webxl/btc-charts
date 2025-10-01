@@ -1,7 +1,7 @@
 import { ResponsiveLine, SliceTooltipProps } from '@nivo/line';
 import { nivoThemes } from '../theme.ts';
 import { useColorMode } from '@chakra-ui/system';
-import { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box } from '@chakra-ui/react';
 import dayjs from 'dayjs';
 import { generatePriceBands, AnalysisFormData, priceBandLabels, PriceBandTypes, DailyPriceDatum } from '../calc.ts';
@@ -59,12 +59,14 @@ const PowerLawChart = ({
   dailyPriceData,
   parameters,
   onDateRangeAdjusted,
-  chartSettings
+  chartSettings,
+  shouldAnimate = false
 }: {
   dailyPriceData: DailyPriceDatum[];
   parameters: AnalysisFormData;
   onDateRangeAdjusted: (startDate: string, endDate: string) => void;
   chartSettings: ChartSettings;
+  shouldAnimate: boolean;
 }) => {
 
   const { colorMode } = useColorMode();
@@ -339,6 +341,150 @@ const PowerLawChart = ({
     );
   };
 
+  const bitcoinHalvingEpochs = [
+    new Date('2009-01-03'),
+    new Date('2012-11-28'),
+    new Date('2016-07-08'),
+    new Date('2020-05-11'),
+    new Date('2024-04-19'),
+    new Date('2028-03-26'),
+    new Date('2032-02-22'),
+    new Date('2036-01-29'),
+    new Date('2040-01-06'),
+  ];
+
+  const convertToRomanNumeral = (num: number) => {    
+    const romanNumerals = {
+      M: 1000,
+      CM: 900,
+      D: 500,
+      CD: 400,
+      C: 100,
+      XC: 90,
+      L: 50,
+      XL: 40,
+      X: 10,
+      IX: 9,
+      V: 5,
+      IV: 4,
+      I: 1
+    };
+    let roman = '';
+    for (let key of Object.keys(romanNumerals)) {
+      let matches = Math.floor(num / romanNumerals[key as keyof typeof romanNumerals]);
+      roman += key.repeat(matches);
+      num -= matches * romanNumerals[key as keyof typeof romanNumerals];
+    }
+    return roman;
+  };
+
+  const EpochLayer = ({ xScale, innerHeight }: any) => {
+    
+    if (!chartSettings.showHalvingEpochs) return null;
+
+    const areaGenerator = area()
+      .x((d: any) => xScale(d.data.x))
+      .y0(() => innerHeight)
+      .y1(() => 0);
+
+    const epochColors = ['#3daff7', '#f47560', '#e8c1a0', '#97e3d5', '#ff66ff', '#61cdbb' ,'#3daff7', '#d5a6ff', '#f1e15b' ];
+
+    const epochRanges = bitcoinHalvingEpochs.map((epoch: Date, index: number) => {
+      const start = chartSettings.useXLog 
+        ? initialDaysSinceGenesis + getDaysFromStartDate(epoch)
+        : epoch.getTime();
+      const nextEpoch = bitcoinHalvingEpochs[index + 1];
+      const end = nextEpoch 
+        ? (chartSettings.useXLog 
+            ? initialDaysSinceGenesis + getDaysFromStartDate(nextEpoch)
+            : nextEpoch.getTime())
+        : undefined;
+      return { start, end, color: epochColors[index % epochColors.length] };
+    });
+  
+    return (
+      <>
+        <Defs
+          defs={epochColors.map((color, index) => ({
+            id: `pattern-${index}`,
+            type: "patternLines",
+            background: "transparent",
+            color: color,
+            lineWidth: 1,
+            spacing: 6,
+            rotation: -45,
+          }))}
+        />
+        
+        {epochRanges.map((range: { start: number; end: number | undefined; color: string }, index: number) => {
+          if (!range.end) return null;
+
+          if ((chartSettings.useXLog && range.end < initialDaysSinceGenesis) || (!chartSettings.useXLog && range.end < startDate.getTime())) return null;
+          
+          const nextEpoch = epochRanges[index + 1];
+          const epochData = [
+            {
+              data: {
+                x: chartSettings.useXLog ?  (index === 0 ? initialDaysSinceGenesis : Math.max(range.start, initialDaysSinceGenesis)) 
+                : (index === 0 ? startDate.getTime() : Math.max(range.start, startDate.getTime())),
+                y: 0
+              }
+            },
+            {
+              data: {
+                x: !!nextEpoch ? nextEpoch.start - 2 : range.start,
+                y: 0
+              }
+            }
+          ];
+
+
+          const fiveDays = 5 * 24 * 60 * 60 * 1000;
+          const getLabelX = () => {
+            if (chartSettings.useXLog) {
+              const x = range.start === 0 ? xScale(initialDaysSinceGenesis + 3) : xScale(range.start + 20);
+              
+              return Math.max(x, getDaysFromStartDate(startDate) + 2) ;
+            }
+            const x = range.start === bitcoinHalvingEpochs[0].getTime() ? xScale(startDate.getTime() + fiveDays) : xScale(range.start + fiveDays);
+            return Math.max(x,  xScale(startDate.getTime() + fiveDays));
+          };
+
+          return (
+            <Fragment key={range.start}>
+              <path
+                d={areaGenerator(epochData as any) ?? undefined}
+                fill={`url(#pattern-${index})`}
+                fillOpacity={0.2}
+                stroke={range.color}
+                strokeWidth={1}
+              />
+              <rect
+                x={getLabelX()}
+                y={innerHeight - 18}
+                width={75}
+                height={16}
+                fill={colorMode === 'dark' ? '#1A202C' : '#fff'}
+                opacity={0.9}
+              />
+              <text
+                x={getLabelX() + 5}
+                y={innerHeight}
+                textAnchor="left"
+                dy={-6}
+                fill={range.color}
+                fontSize={12}
+                fontFamily={'courier'}
+              > Epoch {convertToRomanNumeral(index + 1)}{' '}
+                {/* { chartSettings.useXLog ? dayjs(genesis).add(range.start, 'day').format('YYYY-MM-DD') : dayjs(range.start).format('YYYY-MM-DD')} */}
+              </text>
+            </Fragment>
+          );
+        })}
+      </>
+    );
+  };
+
   const [isScrolling, setIsScrolling] = useState(false);
   const lastDeltaXRef = useRef<number | null>(null);
   const lastDeltaYRef = useRef<number | null>(null);
@@ -598,7 +744,7 @@ const PowerLawChart = ({
     );
   };
 
-  const plotLength = data[0].data.length;
+  const plotLength = data[0]?.data.length;
 
   return (
     <Box
@@ -620,7 +766,7 @@ const PowerLawChart = ({
       <div ref={chartContainerRef} style={{ position: 'relative', height: '100%', width: '100%' }}>
         <SelectionOverlay />
         <ResponsiveLine
-          animate={!isScrolling}
+          animate={shouldAnimate}
           data={data}
           colors={{
             datum: 'color'
@@ -683,6 +829,7 @@ const PowerLawChart = ({
             'axes',
             'crosshair',
             'lines',
+            EpochLayer,
             'markers',
             'legends',
             'slices',

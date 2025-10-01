@@ -14,8 +14,8 @@ export const PeriodSelector = ({
   onChange: (period: number) => void;
   analysisStart: string;
   analysisEnd: string;
-  dataStart: string;
-  dataEnd: string;
+  dataStart?: string;
+  dataEnd?: string;
   isDisabled: boolean;
 }) => {
   const maxPeriod = dayjs(dataEnd).diff(dataStart, 'year');

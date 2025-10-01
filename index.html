@@ -23,6 +23,19 @@
     <meta name="twitter:description"
           content="BTC Charts is a collection of analytical tools to help you analyze and predict the future value of bitcoin."/>
     <meta name="twitter:image" content="https://btc-charts.vercel.app/preview.jpg"/>
+    <style>
+      path {
+            stroke-dasharray: 5000;
+            stroke-dashoffset: 5000;
+            animation: dash 1.5s ease-in-out forwards;
+      }
+
+      @keyframes dash {
+            to {
+                  stroke-dashoffset: 0;
+            }
+      }
+    </style>
 </head>
 <body>
 <div id="root"></div>
