@@ -1,5 +1,5 @@
-import { DailyPriceDatum } from "./calc";
-import dayjs from "dayjs";
+import { DailyPriceDatum } from './calc';
+import dayjs from 'dayjs';
 
 const apiUrl = (import.meta.env.VITE_API_URL as string) || '/api';
 

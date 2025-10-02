@@ -5,7 +5,6 @@ import { Defs, useAnimatedPath } from '@nivo/core';
 import { animated, to } from '@react-spring/web';
 import { convertToRomanNumeral } from '../../utils.ts';
 import { PriceBandTypes } from '../../calc.ts';
-import { sigmaBandColor } from '../../const.ts';
 import { bitcoinHalvingEpochs } from '../../const.ts';
 import { epochColors } from '../../theme.ts';
 
@@ -21,13 +20,13 @@ const AreaPath = ({
   path: string;
 }) => {
   const [isFirstRender, setIsFirstRender] = React.useState(true);
-  
+
   React.useEffect(() => {
     // Disable animation on first render to prevent path interpolation issues
     const timer = setTimeout(() => setIsFirstRender(false), 100);
     return () => clearTimeout(timer);
   }, []);
-  
+
   const animatedPath = useAnimatedPath(path);
 
   // On first render, use the path directly without animation
@@ -60,15 +59,15 @@ const AreaPath = ({
 
 const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: string }) => {
   const [isFirstRender, setIsFirstRender] = React.useState(true);
-  
+
   React.useEffect(() => {
     // Disable animation on first render to prevent path interpolation issues
     const timer = setTimeout(() => setIsFirstRender(false), 100);
     return () => clearTimeout(timer);
   }, []);
-  
+
   const animatedPath = useAnimatedPath(path);
-  
+
   // On first render, use the path directly without animation to avoid interpolation glitches
   if (isFirstRender) {
     return (
@@ -84,7 +83,7 @@ const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: st
       />
     );
   }
-  
+
   return (
     <animated.path
       d={to(animatedPath, p => p || '')}
@@ -186,28 +185,7 @@ export const useLayers = ({
             />
           </filter>
         </defs>
-        <Defs
-          defs={[
-            {
-              id: 'pattern',
-              type: 'patternLines',
-              background: 'transparent',
-              color: sigmaBandColor,
-              lineWidth: 1,
-              spacing: 6,
-              rotation: -45
-            },
-            {
-              id: 'pattern2',
-              type: 'patternLines',
-              background: 'transparent',
-              color: sigmaBandColor,
-              lineWidth: 1,
-              spacing: 6,
-              rotation: 45
-            }
-          ]}
-        />
+      
         {chartSettings.showOuterBand && outerBand && (
           <AreaPath
             areaBlendMode={'normal'}
@@ -293,12 +271,12 @@ export const useLayers = ({
         <Defs
           defs={epochColors[colorMode].map((color: string, index: number) => ({
             id: `pattern-${index}`,
-            type: 'patternLines',
+            type: 'patternDots',
             background: 'transparent',
             color: color,
-            lineWidth: 1,
-            spacing: 6,
-            rotation: -45
+            size: 1,
+            padding: 4,
+            stagger: false
           }))}
         />
         <g style={{ pointerEvents: 'none' }}>

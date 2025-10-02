@@ -12,7 +12,6 @@ export const useTouchEvents = (
   setEndDate: React.Dispatch<React.SetStateAction<Date>>,
   onDateRangeAdjustedRef: React.RefObject<(startDate: string, endDate: string) => void>
 ) => {
-  // Touch gesture state
   const lastTouchDistanceRef = useRef<number | null>(null);
   const lastTouchCenterRef = useRef<number | null>(null);
   const lastAppliedDistanceRef = useRef<number | null>(null);
@@ -32,12 +31,15 @@ export const useTouchEvents = (
     (e: TouchEvent) => {
       if (!mobileZoomPanMode) return;
 
+      // Prevent default pinch-zoom behavior and stop propagation
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+
+      const touch1 = e.touches[0];
+
       if (e.touches.length === 2) {
-        // Prevent default pinch-zoom behavior and stop propagation
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
-        const touch1 = e.touches[0];
+        // Two-finger zoom + pan
         const touch2 = e.touches[1];
         const distance = Math.hypot(
           touch2.clientX - touch1.clientX,
@@ -47,6 +49,13 @@ export const useTouchEvents = (
         lastTouchDistanceRef.current = distance;
         lastTouchCenterRef.current = center;
         lastAppliedDistanceRef.current = distance;
+        lastAppliedCenterRef.current = center;
+      } else if (e.touches.length === 1) {
+        // Single-finger pan
+        const center = touch1.clientX;
+        lastTouchDistanceRef.current = null;
+        lastTouchCenterRef.current = center;
+        lastAppliedDistanceRef.current = null;
         lastAppliedCenterRef.current = center;
       }
     },
@@ -56,17 +65,57 @@ export const useTouchEvents = (
   const handleTouchMove = useCallback(
     (e: TouchEvent) => {
       if (!mobileZoomPanMode) return;
+      if (lastTouchCenterRef.current === null) return;
 
-      if (
-        e.touches.length === 2 &&
-        lastTouchDistanceRef.current !== null &&
-        lastTouchCenterRef.current !== null
-      ) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
 
-        const touch1 = e.touches[0];
+      const touch1 = e.touches[0];
+      const mode = e.touches.length === 2 ? 'zoom' : 'pan';
+
+      setIsScrolling(true);
+
+      const currentStartDate = startDateRef.current ?? new Date();
+      const currentEndDate = endDateRef.current ?? new Date();
+      const dateRange = currentEndDate.getTime() - currentStartDate.getTime();
+
+      let newStartDate: Date, newEndDate: Date;
+
+      if (mode === 'pan') {
+        // Single-finger pan only
+        const center = touch1.clientX;
+        const lastCenter = lastAppliedCenterRef.current || lastTouchCenterRef.current;
+
+        // Check for minimum movement
+        const centerChange = Math.abs(center - lastCenter);
+        if (centerChange < 5) {
+          setIsScrolling(false);
+          return;
+        }
+
+        const actualCenterChange = center - lastCenter;
+
+        // Apply panning
+        const container = chartContainerRef.current;
+        if (container) {
+          const rect = container.getBoundingClientRect();
+          const chartWidth = rect.width - 41;
+          const panRatio = -actualCenterChange / chartWidth;
+          const panAmount = dateRange * panRatio;
+
+          newStartDate = new Date(currentStartDate.getTime() + panAmount);
+          newEndDate = new Date(currentEndDate.getTime() + panAmount);
+        } else {
+          return;
+        }
+
+        lastTouchCenterRef.current = center;
+        lastAppliedCenterRef.current = center;
+      } else {
+        // Two-finger zoom + pan
+        if (lastTouchDistanceRef.current === null) return;
+
         const touch2 = e.touches[1];
         const distance = Math.hypot(
           touch2.clientX - touch1.clientX,
@@ -74,45 +123,25 @@ export const useTouchEvents = (
         );
         const center = (touch1.clientX + touch2.clientX) / 2;
 
-        setIsScrolling(true);
+        const lastDistance = lastAppliedDistanceRef.current || lastTouchDistanceRef.current;
+        const lastCenter = lastAppliedCenterRef.current || lastTouchCenterRef.current;
 
-        // Only update if there's significant movement (reduces jitter)
-        if (lastAppliedDistanceRef.current !== null && lastAppliedCenterRef.current !== null) {
-          const distanceChange = Math.abs(distance - lastAppliedDistanceRef.current);
-          const centerChange = Math.abs(center - lastAppliedCenterRef.current);
+        // Check for minimum movement
+        const distanceChange = Math.abs(distance - lastDistance);
+        const centerChange = Math.abs(center - lastCenter);
 
-          // Require minimum movement to update
-          // Higher threshold for zoom (10px) to reduce jitter, lower for pan (5px)
-          const minDistanceChange = 10;
-          const minCenterChange = 5;
-
-          if (distanceChange < minDistanceChange && centerChange < minCenterChange) {
-            lastTouchDistanceRef.current = distance;
-            lastTouchCenterRef.current = center;
-            setIsScrolling(false);
-            return;
-          }
+        if (distanceChange < 10 && centerChange < 5) {
+          setIsScrolling(false);
+          return;
         }
-
-        const lastDistance = lastAppliedDistanceRef.current || lastTouchDistanceRef.current!;
-        const lastCenter = lastAppliedCenterRef.current || lastTouchCenterRef.current!;
-
-        const currentStartDate = startDateRef.current ?? new Date();
-        const currentEndDate = endDateRef.current ?? new Date();
-        const dateRange = currentEndDate.getTime() - currentStartDate.getTime();
 
         // Calculate zoom based on pinch distance ratio
         const distanceRatio = distance / lastDistance;
-
-        // Calculate pan based on center movement
         const actualCenterChange = center - lastCenter;
 
-        let newStartDate: Date, newEndDate: Date;
-
-        // Apply zoom based on pinch distance ratio
+        // Apply zoom
         const midPoint = new Date(currentStartDate.getTime() + dateRange / 2);
-        // Dampen the zoom to make it less sensitive
-        const zoomAmount = (distanceRatio - 1) * 0.5; // Reduce sensitivity by 50%
+        const zoomAmount = (distanceRatio - 1) * 0.5; // Dampen zoom sensitivity
         const dampedRatio = 1 + zoomAmount;
         const zoomFactor = 1 / dampedRatio;
         const newRange = dateRange * zoomFactor;
@@ -120,39 +149,40 @@ export const useTouchEvents = (
         newStartDate = new Date(midPoint.getTime() - newRange / 2);
         newEndDate = new Date(midPoint.getTime() + newRange / 2);
 
-        // Apply panning based on center movement
+        // Apply panning
         const container = chartContainerRef.current;
         if (container) {
           const rect = container.getBoundingClientRect();
           const chartWidth = rect.width - 41;
-          const panRatio = -actualCenterChange / chartWidth; // Negative for natural scrolling
-          const panAmount = newRange * panRatio; // Use newRange for consistent feel
+          const panRatio = -actualCenterChange / chartWidth;
+          const panAmount = newRange * panRatio;
 
           newStartDate = new Date(newStartDate.getTime() + panAmount);
           newEndDate = new Date(newEndDate.getTime() + panAmount);
-        }
-
-        // Prevent going before genesis
-        if (newStartDate <= new Date(2009, 1, 3)) {
-          debouncedZoomEnd();
-          return;
-        }
-
-        setStartDate(newStartDate);
-        setEndDate(newEndDate);
-        if (onDateRangeAdjustedRef.current) {
-          onDateRangeAdjustedRef.current(
-            dayjs(newStartDate).format('YYYY-MM-DD'),
-            dayjs(newEndDate).format('YYYY-MM-DD')
-          );
         }
 
         lastTouchDistanceRef.current = distance;
         lastTouchCenterRef.current = center;
         lastAppliedDistanceRef.current = distance;
         lastAppliedCenterRef.current = center;
-        debouncedZoomEnd();
       }
+
+      // Prevent going before genesis
+      if (newStartDate <= new Date(2009, 1, 3)) {
+        debouncedZoomEnd();
+        return;
+      }
+
+      setStartDate(newStartDate);
+      setEndDate(newEndDate);
+      if (onDateRangeAdjustedRef.current) {
+        onDateRangeAdjustedRef.current(
+          dayjs(newStartDate).format('YYYY-MM-DD'),
+          dayjs(newEndDate).format('YYYY-MM-DD')
+        );
+      }
+
+      debouncedZoomEnd();
     },
     [
       debouncedZoomEnd,
