@@ -173,7 +173,9 @@ function App() {
       localStorage.setItem('chartSettings', JSON.stringify(settings));
       const seriesToggled =
         settings.showOuterBand !== chartSettings.showOuterBand ||
-        settings.showInnerBand !== chartSettings.showInnerBand;
+        settings.showInnerBand !== chartSettings.showInnerBand ||
+        settings.showPowerLawPlot !== chartSettings.showPowerLawPlot ||
+        settings.showPricePlot !== chartSettings.showPricePlot;
       setSeriesToggled(seriesToggled);
       setChartSettings(settings);
     },

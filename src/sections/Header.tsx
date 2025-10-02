@@ -1,10 +1,24 @@
 import { useColorMode } from '@chakra-ui/system';
-import { Heading, HStack, IconButton } from '@chakra-ui/react';
+import { Heading, HStack, IconButton, Box, Text } from '@chakra-ui/react';
 import { appName } from '../const.ts';
 import { MoonIcon, SunIcon } from '@chakra-ui/icons';
+import { useEffect, useState } from 'react';
+import { fetchLatestPrice } from '../fetch.ts';
+import { formatCurrency } from '../utils.ts';
 
 export const Header = () => {
   const { colorMode, toggleColorMode } = useColorMode();
+
+  const [latestPrice, setLatestPrice] = useState(0);
+
+  useEffect(() => {
+    fetchLatestPrice().then(setLatestPrice);
+    const interval = setInterval(() => {
+      console.log('fetching latest price');
+      fetchLatestPrice().then(setLatestPrice);
+    }, 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <HStack
@@ -22,6 +36,9 @@ export const Header = () => {
       <Heading size={'lg'} as={'h1'} fontWeight={400}>
         {appName}
       </Heading>
+      <Box>
+        <Text>{formatCurrency(latestPrice)}</Text>
+      </Box>
       <HStack>
         <IconButton
           aria-label="Toggle Dark Mode"

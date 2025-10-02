@@ -39,6 +39,29 @@
           stroke-dashoffset: 0;
         }
       }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+        }
+        to {
+          opacity: 1;
+        }
+      }
+      @keyframes fadeOut {
+        0% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+      .epoch-fade-in {
+        animation: fadeIn 0.5s ease-in forwards;
+        opacity: 0;
+      }
+      .epoch-fade-out {
+        animation: fadeOut 0.5s ease-out forwards;
+      }
     </style>
   </head>
   <body>

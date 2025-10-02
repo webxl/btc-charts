@@ -1,3 +1,4 @@
+import React from 'react';
 import { ResponsiveLine, SliceTooltipProps } from '@nivo/line';
 import { nivoThemes, epochColors } from '../../theme.ts';
 import { useColorMode } from '@chakra-ui/system';
@@ -20,12 +21,12 @@ import {
 } from '../../utils.ts';
 import { bitcoinHalvingEpochs, powerLawColor, sigmaBandColor } from '../../const.ts';
 
-import { linearGradientDef, Defs, useAnimatedPath, useMotionConfig } from '@nivo/core';
+import { linearGradientDef, Defs, useAnimatedPath } from '@nivo/core';
 import { area } from 'd3-shape';
 
 import { ChartSettings } from '../ChartControls.tsx';
 
-import { useSpring, animated, to } from '@react-spring/web';
+import { animated, to } from '@react-spring/web';
 import { useTouchEvents, useMouseEvents } from './utils.tsx';
 
 type Datum = { x: number; y: number | null };
@@ -33,30 +34,20 @@ type Datum = { x: number; y: number | null };
 const AreaPath = ({
   areaBlendMode,
   areaOpacity,
-  color,
   fill,
   path
 }: {
   areaBlendMode: string;
   areaOpacity: number;
-  color: string;
-  fill: string | undefined;
+  fill: string;
   path: string;
 }) => {
-  const { animate, config: springConfig } = useMotionConfig();
-
   const animatedPath = useAnimatedPath(path);
-  const animatedProps = useSpring({
-    color,
-    config: springConfig,
-    immediate: !animate
-  });
 
   return (
     <animated.path
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       d={to(animatedPath, p => p || '')}
-      fill={fill ? fill : animatedProps.color}
+      fill={fill}
       fillOpacity={areaOpacity}
       strokeWidth={0}
       style={{
@@ -65,6 +56,22 @@ const AreaPath = ({
     />
   );
 };
+
+const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: string }) => {
+  const animatedPath = useAnimatedPath(path);
+  return (
+    <animated.path
+      d={to(animatedPath, p => p || '')}
+      fill="none"
+      stroke={series.color}
+      strokeWidth={series.id === 'price' ||series.id === 'powerLaw' ? 2 : 0}
+      data-id={series.id}
+      data-type="line"
+      filter={series.id === 'price' ? "url(#line-shadow)" : undefined}
+      style={{ pointerEvents: 'none' }}
+    />
+  );
+});
 
 const PowerLawChart = ({
   dailyPriceData,
@@ -139,7 +146,7 @@ const PowerLawChart = ({
           type === (PriceBandTypes.powerLaw as string)
             ? powerLawColor
             : type === (PriceBandTypes.price as string)
-              ? '#77d926'
+              ? colorMode === 'dark' ? '#77d926' : 'blue'
               : 'transparent',
         data: data
           .map(d => {
@@ -165,6 +172,7 @@ const PowerLawChart = ({
     return data;
   }, [
     dailyPriceData,
+    colorMode,
     endDate,
     getDaysFromStartDate,
     initialDaysSinceGenesis,
@@ -345,6 +353,11 @@ const PowerLawChart = ({
 
     return (
       <>
+        <defs>
+          <filter id="line-shadow" x="-50%" y="-50%" width="200%" height="200%">
+            <feDropShadow dx="0" dy="1" stdDeviation="3" floodOpacity="0.5" floodColor={colorMode === 'dark' ? 'white' : 'blue'} />
+          </filter>
+        </defs>
         <Defs
           defs={[
             {
@@ -370,18 +383,16 @@ const PowerLawChart = ({
         {chartSettings.showOuterBand && outerBand && (
           <AreaPath
             areaBlendMode={'normal'}
-            areaOpacity={0.2}
-            color={'#3daff7'}
-            fill={'#3daff7'}
+            areaOpacity={0.8}
+            fill={colorMode === 'light' ? '#c5e7fd' : '#1e3d4d'}
             path={outerBand}
           />
         )}
         {chartSettings.showInnerBand && innerBand && (
           <AreaPath
             areaBlendMode={'normal'}
-            areaOpacity={0.3}
-            color={'#3daff7'}
-            fill={'#3daff7'}
+            areaOpacity={0.8}
+            fill={colorMode === 'light' ? '#9ed7fb' : '#275566'}
             path={innerBand}
           />
         )}
@@ -401,29 +412,31 @@ const PowerLawChart = ({
               x: xScale(d.data.x),
               y: yScale(d.data.y)
             }));
-
-          // Skip rendering if no valid points
           if (validPoints.length === 0) return null;
 
-          return (
-            <path
-              key={serie.id}
-              d={lineGenerator(validPoints)}
-              fill="none"
-              stroke={serie.color}
-              strokeWidth={serie.id === 'price' ? 2 : serie.id === 'powerLaw' ? 2 : 0}
-              data-id={serie.id}
-              data-type={'line'}
-              style={{ pointerEvents: 'none' }}
-            />
-          );
+          const path = lineGenerator(validPoints);
+          return <CustomAnimatedLine key={serie.id} series={serie} path={path} />
         })}
       </g>
     );
   };
 
   const EpochLayer = ({ xScale, innerHeight }: any) => {
-    if (!chartSettings.showHalvingEpochs) return null;
+    const prevShowHalvingEpochs = useRef(chartSettings.showHalvingEpochs);
+    const [isAnimatingOut, setIsAnimatingOut] = useState(false);
+
+    useEffect(() => {
+      if (prevShowHalvingEpochs.current && !chartSettings.showHalvingEpochs) {
+        setIsAnimatingOut(true);
+        const timeout = setTimeout(() => {
+          setIsAnimatingOut(false);
+        }, 500); // Match animation duration
+        return () => clearTimeout(timeout);
+      }
+      prevShowHalvingEpochs.current = chartSettings.showHalvingEpochs;
+    }, [chartSettings.showHalvingEpochs]);
+
+    if (!chartSettings.showHalvingEpochs && !isAnimatingOut) return null;
 
     const areaGenerator = area()
       .x((d: any) => xScale(d.data.x))
@@ -460,7 +473,7 @@ const PowerLawChart = ({
             rotation: -45
           }))}
         />
-
+        <g style={{ pointerEvents: 'none' }}>
         {epochRanges.map(
           (range: { start: number; end: number | undefined; color: string }, index: number) => {
             if (!range.end) return null;
@@ -518,6 +531,10 @@ const PowerLawChart = ({
                   fillOpacity={0.2}
                   stroke={range.color}
                   strokeWidth={1}
+                  className={isAnimatingOut ? 'epoch-fade-out' : 'epoch-fade-in'}
+                  style={{
+                    animationDelay: isAnimatingOut ? '0s' : `${index * 0.1}s`
+                  }}
                 />
                 <rect
                   x={getLabelX()}
@@ -525,7 +542,10 @@ const PowerLawChart = ({
                   width={75}
                   height={16}
                   fill={colorMode === 'dark' ? '#1A202C' : '#fff'}
-                  opacity={0.9}
+                  className={isAnimatingOut ? 'epoch-fade-out' : 'epoch-fade-in'}
+                  style={{
+                    animationDelay: isAnimatingOut ? '0s' : `${index * 0.1}s`
+                  }}
                 />
                 <text
                   x={getLabelX() + 5}
@@ -535,6 +555,10 @@ const PowerLawChart = ({
                   fill={range.color}
                   fontSize={12}
                   fontFamily={'courier'}
+                  className={isAnimatingOut ? 'epoch-fade-out' : 'epoch-fade-in'}
+                  style={{
+                    animationDelay: isAnimatingOut ? '0s' : `${index * 0.1}s`
+                  }}
                 >
                   {' '}
                   Epoch {convertToRomanNumeral(index + 1)}{' '}
@@ -544,6 +568,7 @@ const PowerLawChart = ({
             );
           }
         )}
+        </g>
       </>
     );
   };
@@ -799,12 +824,13 @@ const PowerLawChart = ({
           legends={[]}
           layers={[
             'grid',
+            EpochLayer,
             'areas',
             AreaLayer,
             'axes',
             'crosshair',
             CustomLineLayer,
-            EpochLayer,
+            // 'lines',
             'markers',
             'legends',
             'slices',
