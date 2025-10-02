@@ -16,6 +16,7 @@ export const bitcoinHalvingEpochs = [
 ];
 export const powerLawColor = '#f47560';
 export const sigmaBandColor = '#3daff7';
+export const darkPriceColor = '#77d926';
 /*
     # python fitting
 

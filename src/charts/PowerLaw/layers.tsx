@@ -180,8 +180,8 @@ export const useLayers = ({
               dx="0"
               dy="1"
               stdDeviation="3"
-              floodOpacity="0.5"
-              floodColor={colorMode === 'dark' ? 'white' : 'blue'}
+              floodOpacity={colorMode === 'dark' ? 0.5 : 0.9}
+              floodColor={colorMode === 'dark' ? 'white' : '#66e264'}
             />
           </filter>
         </defs>

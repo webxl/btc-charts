@@ -1,7 +1,14 @@
 import { ResponsiveLine, SliceTooltipProps } from '@nivo/line';
 import { nivoThemes } from '../../theme.ts';
 import { useColorMode } from '@chakra-ui/system';
-import { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ReactElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from 'react';
 import { Box } from '@chakra-ui/react';
 import dayjs from 'dayjs';
 
@@ -378,6 +385,7 @@ const PowerLawChart = ({
     return values;
   }, [highestPriceInData, lowestPriceInData]);
 
+  const lastAppliedYTickValues = useRef<number[] | number>([]);
   const yAxisTickValues = useMemo(() => {
     if (chartSettings.useYLog) {
       const allValues = [lowestPriceInData, ...middleLogValues, highestPriceInData];
@@ -393,10 +401,18 @@ const PowerLawChart = ({
         return ratio >= 2;
       });
 
-      return filtered;
+      lastAppliedYTickValues.current = filtered;
+    } else {
+      lastAppliedYTickValues.current = 5;
     }
-    return 5;
-  }, [chartSettings.useYLog, lowestPriceInData, middleLogValues, highestPriceInData]);
+    return lastAppliedYTickValues.current;
+  }, [
+    chartSettings.useYLog,
+    lowestPriceInData,
+    middleLogValues,
+    highestPriceInData,
+    mobileZoomPanMode
+  ]);
 
   // Selection overlay component
   const SelectionOverlay = () => {

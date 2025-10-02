@@ -5,6 +5,7 @@ import { MoonIcon, SunIcon } from '@chakra-ui/icons';
 import { useEffect, useState } from 'react';
 import { fetchLatestPrice } from '../fetch.ts';
 import { formatCurrency } from '../utils.ts';
+import { darkPriceColor } from '../const.ts';
 
 export const Header = () => {
   const { colorMode, toggleColorMode } = useColorMode();
@@ -14,7 +15,6 @@ export const Header = () => {
   useEffect(() => {
     fetchLatestPrice().then(setLatestPrice);
     const interval = setInterval(() => {
-      console.log('fetching latest price');
       fetchLatestPrice().then(setLatestPrice);
     }, 60 * 1000);
     return () => clearInterval(interval);
@@ -37,7 +37,8 @@ export const Header = () => {
         {appName}
       </Heading>
       <Box>
-        <Text>{formatCurrency(latestPrice)}</Text>
+        <Text color={colorMode === 'light' ? 'blue' : darkPriceColor} filter=
+        {`drop-shadow(0px 0px ${colorMode === 'dark' ? ' 3px rgba(255, 255, 255, 0.6)':  ' 1px #66e264'})`}>{formatCurrency(latestPrice)}</Text>
       </Box>
       <HStack>
         <IconButton
