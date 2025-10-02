@@ -86,14 +86,14 @@ const ChartControls = ({
               {chartSettings.showPricePlot ? 'Hide' : 'Show'}
             </Button>
           </FormControl>
-          <FormControl>
-            <Label label="Halving Epochs" />
-            <Button onClick={() => toggleSetting('showHalvingEpochs')} isDisabled={isLoading}>
-              {chartSettings.showHalvingEpochs ? 'Hide' : 'Show'}
-            </Button>
-          </FormControl>
         </>
       )}
+      <FormControl>
+        <Label label="Halving Epochs" />
+        <Button onClick={() => toggleSetting('showHalvingEpochs')} isDisabled={isLoading}>
+          {chartSettings.showHalvingEpochs ? 'Hide' : 'Show'}
+        </Button>
+      </FormControl>
     </VStack>
   );
 };
