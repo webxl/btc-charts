@@ -3,7 +3,7 @@ import { extendTheme } from '@chakra-ui/react';
 import '@fontsource/brawler';
 import '@fontsource/roboto';
 import { checkboxAnatomy as parts } from '@chakra-ui/anatomy';
-import { createMultiStyleConfigHelpers, defineStyle } from '@chakra-ui/styled-system';
+import { background, createMultiStyleConfigHelpers, defineStyle } from '@chakra-ui/styled-system';
 import { theme as chakraTheme } from '@chakra-ui/theme';
 
 // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -194,6 +194,7 @@ const darkTheme: DefaultTheme = {
       stroke: '#52627155'
     }
   },
+  background: chakraTheme.colors.gray[800],
   legends: {
     text: {
       fontSize: 12,

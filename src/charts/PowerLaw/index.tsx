@@ -1,8 +1,7 @@
-import React from 'react';
 import { ResponsiveLine, SliceTooltipProps } from '@nivo/line';
-import { nivoThemes, epochColors } from '../../theme.ts';
+import { nivoThemes } from '../../theme.ts';
 import { useColorMode } from '@chakra-ui/system';
-import { Fragment, ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box } from '@chakra-ui/react';
 import dayjs from 'dayjs';
 
@@ -13,65 +12,17 @@ import {
   PriceBandTypes,
   DailyPriceDatum
 } from '../../calc.ts';
-import {
-  formatCurrency,
-  formatCurrencyForAxis,
-  formatCurrencyWithCents,
-  convertToRomanNumeral
-} from '../../utils.ts';
-import { bitcoinHalvingEpochs, powerLawColor, sigmaBandColor } from '../../const.ts';
+import { formatCurrency, formatCurrencyForAxis, formatCurrencyWithCents } from '../../utils.ts';
+import { powerLawColor, sigmaBandColor } from '../../const.ts';
 
-import { linearGradientDef, Defs, useAnimatedPath } from '@nivo/core';
-import { area } from 'd3-shape';
+import { linearGradientDef } from '@nivo/core';
 
 import { ChartSettings } from '../ChartControls.tsx';
 
-import { animated, to } from '@react-spring/web';
 import { useTouchEvents, useMouseEvents } from './utils.tsx';
+import { useLayers } from './layers.tsx';
 
 type Datum = { x: number; y: number | null };
-
-const AreaPath = ({
-  areaBlendMode,
-  areaOpacity,
-  fill,
-  path
-}: {
-  areaBlendMode: string;
-  areaOpacity: number;
-  fill: string;
-  path: string;
-}) => {
-  const animatedPath = useAnimatedPath(path);
-
-  return (
-    <animated.path
-      d={to(animatedPath, p => p || '')}
-      fill={fill}
-      fillOpacity={areaOpacity}
-      strokeWidth={0}
-      style={{
-        mixBlendMode: areaBlendMode as React.CSSProperties['mixBlendMode']
-      }}
-    />
-  );
-};
-
-const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: string }) => {
-  const animatedPath = useAnimatedPath(path);
-  return (
-    <animated.path
-      d={to(animatedPath, p => p || '')}
-      fill="none"
-      stroke={series.color}
-      strokeWidth={series.id === 'price' ||series.id === 'powerLaw' ? 2 : 0}
-      data-id={series.id}
-      data-type="line"
-      filter={series.id === 'price' ? "url(#line-shadow)" : undefined}
-      style={{ pointerEvents: 'none' }}
-    />
-  );
-});
 
 const PowerLawChart = ({
   dailyPriceData,
@@ -146,7 +97,9 @@ const PowerLawChart = ({
           type === (PriceBandTypes.powerLaw as string)
             ? powerLawColor
             : type === (PriceBandTypes.price as string)
-              ? colorMode === 'dark' ? '#77d926' : 'blue'
+              ? colorMode === 'dark'
+                ? '#77d926'
+                : 'blue'
               : 'transparent',
         data: data
           .map(d => {
@@ -295,287 +248,18 @@ const PowerLawChart = ({
     [colorMode, genesis, chartSettings.useXLog, mobileZoomPanMode]
   );
 
-  // layers
-  const AreaLayer = ({ series, xScale, yScale, innerHeight }: any) => {
-    const getArea = (lowerBound: readonly any[], upperBound: readonly any[]) => {
-      // Ensure both bounds have the same length and valid data
-      if (!lowerBound || !upperBound || lowerBound.length === 0 || upperBound.length === 0) {
-        return null;
-      }
-
-      // Ensure both arrays have the same length by using the minimum length
-      const minLength = Math.min(lowerBound.length, upperBound.length);
-      const trimmedUpper = upperBound.slice(0, minLength);
-      const trimmedLower = lowerBound.slice(0, minLength);
-
-      return area<any>()
-        .defined((d: any, i: number) => {
-          // Only draw area if both bounds have valid data at this index
-          return (
-            i < trimmedLower.length &&
-            d.data.y !== null &&
-            trimmedLower[i].data.y !== null &&
-            (!chartSettings.useYLog || (d.data.y > 0 && trimmedLower[i].data.y > 0))
-          );
-        })
-        .x((d: any) => {
-          const xVal = Number(d.data.x);
-          return typeof xScale === 'function' ? xScale(xVal) : 0;
-        })
-        .y0((d: any) => {
-          const y = Number(d.data.y);
-          if (y === null || (chartSettings.useYLog && y <= 0)) return innerHeight;
-          return typeof yScale === 'function' ? yScale(y) : 0;
-        })
-        .y1((_d: any, i: number) => {
-          if (i >= trimmedLower.length) return innerHeight;
-          const y = Number(trimmedLower[i].data.y);
-          if (y === null || (chartSettings.useYLog && y <= 0)) return innerHeight;
-          return typeof yScale === 'function' ? yScale(y) : 0;
-        })(trimmedUpper);
-    };
-
-    const lowerOuterBound =
-      (series as readonly any[]).find(s => s.id === PriceBandTypes.negTwoSigma)?.data ?? [];
-    const upperOuterBound =
-      (series as readonly any[]).find(s => s.id === PriceBandTypes.posTwoSigma)?.data ?? [];
-    const lowerInnerBound =
-      (series as readonly any[]).find(s => s.id === PriceBandTypes.negOneSigma)?.data ?? [];
-    const upperInnerBound =
-      (series as readonly any[]).find(s => s.id === PriceBandTypes.posOneSigma)?.data ?? [];
-
-    const outerBand = chartSettings.showOuterBand
-      ? getArea(lowerOuterBound, upperOuterBound)
-      : null;
-    const innerBand = chartSettings.showInnerBand
-      ? getArea(lowerInnerBound, upperInnerBound)
-      : null;
-
-    return (
-      <>
-        <defs>
-          <filter id="line-shadow" x="-50%" y="-50%" width="200%" height="200%">
-            <feDropShadow dx="0" dy="1" stdDeviation="3" floodOpacity="0.5" floodColor={colorMode === 'dark' ? 'white' : 'blue'} />
-          </filter>
-        </defs>
-        <Defs
-          defs={[
-            {
-              id: 'pattern',
-              type: 'patternLines',
-              background: 'transparent',
-              color: sigmaBandColor,
-              lineWidth: 1,
-              spacing: 6,
-              rotation: -45
-            },
-            {
-              id: 'pattern2',
-              type: 'patternLines',
-              background: 'transparent',
-              color: sigmaBandColor,
-              lineWidth: 1,
-              spacing: 6,
-              rotation: 45
-            }
-          ]}
-        />
-        {chartSettings.showOuterBand && outerBand && (
-          <AreaPath
-            areaBlendMode={'normal'}
-            areaOpacity={0.8}
-            fill={colorMode === 'light' ? '#c5e7fd' : '#1e3d4d'}
-            path={outerBand}
-          />
-        )}
-        {chartSettings.showInnerBand && innerBand && (
-          <AreaPath
-            areaBlendMode={'normal'}
-            areaOpacity={0.8}
-            fill={colorMode === 'light' ? '#9ed7fb' : '#275566'}
-            path={innerBand}
-          />
-        )}
-      </>
-    );
-  };
-
-  // Custom line layer that adds data-id attributes for CSS targeting
-  const CustomLineLayer = ({ series, lineGenerator, xScale, yScale }: any) => {
-    return (
-      <g>
-        {series.map((serie: any) => {
-          // Filter out invalid data points (null, undefined, NaN)
-          const validPoints = serie.data
-            .filter((d: any) => d.data.y !== null && d.data.y !== undefined && !isNaN(d.data.y))
-            .map((d: any) => ({
-              x: xScale(d.data.x),
-              y: yScale(d.data.y)
-            }));
-          if (validPoints.length === 0) return null;
-
-          const path = lineGenerator(validPoints);
-          return <CustomAnimatedLine key={serie.id} series={serie} path={path} />
-        })}
-      </g>
-    );
-  };
-
-  const EpochLayer = ({ xScale, innerHeight }: any) => {
-    const prevShowHalvingEpochs = useRef(chartSettings.showHalvingEpochs);
-    const [isAnimatingOut, setIsAnimatingOut] = useState(false);
-
-    useEffect(() => {
-      if (prevShowHalvingEpochs.current && !chartSettings.showHalvingEpochs) {
-        setIsAnimatingOut(true);
-        const timeout = setTimeout(() => {
-          setIsAnimatingOut(false);
-        }, 500); // Match animation duration
-        return () => clearTimeout(timeout);
-      }
-      prevShowHalvingEpochs.current = chartSettings.showHalvingEpochs;
-    }, [chartSettings.showHalvingEpochs]);
-
-    if (!chartSettings.showHalvingEpochs && !isAnimatingOut) return null;
-
-    const areaGenerator = area()
-      .x((d: any) => xScale(d.data.x))
-      .y0(() => innerHeight)
-      .y1(() => 0);
-
-    const epochRanges = bitcoinHalvingEpochs.map((epoch: Date, index: number) => {
-      const start = chartSettings.useXLog
-        ? initialDaysSinceGenesis + getDaysFromStartDate(epoch)
-        : epoch.getTime();
-      const nextEpoch = bitcoinHalvingEpochs[index + 1];
-      const end = nextEpoch
-        ? chartSettings.useXLog
-          ? initialDaysSinceGenesis + getDaysFromStartDate(nextEpoch)
-          : nextEpoch.getTime()
-        : undefined;
-      return {
-        start,
-        end,
-        color: epochColors[colorMode][index % epochColors[colorMode].length]
-      };
-    });
-
-    return (
-      <>
-        <Defs
-          defs={epochColors[colorMode].map((color, index) => ({
-            id: `pattern-${index}`,
-            type: 'patternLines',
-            background: 'transparent',
-            color: color,
-            lineWidth: 1,
-            spacing: 6,
-            rotation: -45
-          }))}
-        />
-        <g style={{ pointerEvents: 'none' }}>
-        {epochRanges.map(
-          (range: { start: number; end: number | undefined; color: string }, index: number) => {
-            if (!range.end) return null;
-
-            if (
-              (chartSettings.useXLog && range.end < initialDaysSinceGenesis) ||
-              (!chartSettings.useXLog && range.end < startDate.getTime())
-            )
-              return null;
-
-            const nextEpoch = epochRanges[index + 1];
-            const epochData = [
-              {
-                data: {
-                  x: chartSettings.useXLog
-                    ? index === 0
-                      ? initialDaysSinceGenesis
-                      : Math.max(range.start, initialDaysSinceGenesis)
-                    : index === 0
-                      ? startDate.getTime()
-                      : Math.max(range.start, startDate.getTime()),
-                  y: 0
-                }
-              },
-              {
-                data: {
-                  x: !!nextEpoch ? nextEpoch.start - 2 : range.start,
-                  y: 0
-                }
-              }
-            ];
-
-            const fiveDays = 5 * 24 * 60 * 60 * 1000;
-            const getLabelX = () => {
-              if (chartSettings.useXLog) {
-                const x =
-                  range.start === 0
-                    ? xScale(initialDaysSinceGenesis + 3)
-                    : xScale(range.start + 20);
-
-                return Math.max(x, getDaysFromStartDate(startDate) + 2);
-              }
-              const x =
-                range.start === bitcoinHalvingEpochs[0].getTime()
-                  ? xScale(startDate.getTime() + fiveDays)
-                  : xScale(range.start + fiveDays);
-              return Math.max(x, xScale(startDate.getTime() + fiveDays));
-            };
-
-            return (
-              <Fragment key={range.start}>
-                <path
-                  d={areaGenerator(epochData as any) ?? undefined}
-                  fill={`url(#pattern-${index})`}
-                  fillOpacity={0.2}
-                  stroke={range.color}
-                  strokeWidth={1}
-                  className={isAnimatingOut ? 'epoch-fade-out' : 'epoch-fade-in'}
-                  style={{
-                    animationDelay: isAnimatingOut ? '0s' : `${index * 0.1}s`
-                  }}
-                />
-                <rect
-                  x={getLabelX()}
-                  y={innerHeight - 18}
-                  width={75}
-                  height={16}
-                  fill={colorMode === 'dark' ? '#1A202C' : '#fff'}
-                  className={isAnimatingOut ? 'epoch-fade-out' : 'epoch-fade-in'}
-                  style={{
-                    animationDelay: isAnimatingOut ? '0s' : `${index * 0.1}s`
-                  }}
-                />
-                <text
-                  x={getLabelX() + 5}
-                  y={innerHeight}
-                  textAnchor="left"
-                  dy={-6}
-                  fill={range.color}
-                  fontSize={12}
-                  fontFamily={'courier'}
-                  className={isAnimatingOut ? 'epoch-fade-out' : 'epoch-fade-in'}
-                  style={{
-                    animationDelay: isAnimatingOut ? '0s' : `${index * 0.1}s`
-                  }}
-                >
-                  {' '}
-                  Epoch {convertToRomanNumeral(index + 1)}{' '}
-                  {/* { chartSettings.useXLog ? dayjs(genesis).add(range.start, 'day').format('YYYY-MM-DD') : dayjs(range.start).format('YYYY-MM-DD')} */}
-                </text>
-              </Fragment>
-            );
-          }
-        )}
-        </g>
-      </>
-    );
-  };
-
   // Scroll state
   const [isScrolling, setIsScrolling] = useState(false);
   const chartContainerRef = useRef<HTMLDivElement>(null);
+
+  // layers
+  const { AreaLayer, CustomLineLayer, EpochLayer } = useLayers({
+    chartSettings,
+    startDate,
+    colorMode,
+    initialDaysSinceGenesis,
+    getDaysFromStartDate
+  });
 
   // Convert mouse X position to date
   const mouseXToDate = useCallback(
@@ -830,7 +514,6 @@ const PowerLawChart = ({
             'axes',
             'crosshair',
             CustomLineLayer,
-            // 'lines',
             'markers',
             'legends',
             'slices',
