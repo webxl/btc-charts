@@ -3,7 +3,20 @@ export const powerLawIntercept = 2.777e-17;
 export const powerLawSlope = 5.71;
 export const powerLawStdResiduals = 0.7305045048910941;
 
-  /*
+export const bitcoinHalvingEpochs = [
+  new Date('2009-01-03'),
+  new Date('2012-11-28'),
+  new Date('2016-07-08'),
+  new Date('2020-05-11'),
+  new Date('2024-04-19'),
+  new Date('2028-03-26'),
+  new Date('2032-02-22'),
+  new Date('2036-01-29'),
+  new Date('2040-01-06')
+];
+export const powerLawColor = '#f47560';
+export const sigmaBandColor = '#3daff7';
+/*
     # python fitting
 
     def log_power_law(log_x, log_a, b):
@@ -44,5 +57,5 @@ export const powerLawStdResiduals = 0.7305045048910941;
     lower_2std = np.exp(linear_func(np.log(x_pred), *popt) - 2*std_residuals)
    */
 
-  // https://www.porkopolis.io/thechart/ a=1.39e-17 b=5.79
-  // https://www.desmos.com/calculator/y9lg886azr
+// https://www.porkopolis.io/thechart/ a=1.39e-17 b=5.79
+// https://www.desmos.com/calculator/y9lg886azr

@@ -72,7 +72,7 @@ const lightTheme: DefaultTheme = {
     ticks: {
       line: {
         strokeWidth: 1,
-        stroke: '#889eae'
+        stroke: '#aaaaaa22'
       },
       text: {
         fill: '#6a7c89',
@@ -87,6 +87,11 @@ const lightTheme: DefaultTheme = {
       }
     }
   },
+  grid: {
+    line: {
+      stroke: '#aaaaaa22'
+    }
+  },
   legends: {
     text: {
       fontSize: 12
@@ -94,7 +99,7 @@ const lightTheme: DefaultTheme = {
     ticks: {
       line: {
         strokeWidth: 1,
-        stroke: '#637079'
+        stroke: '#aaaaaa22'
       },
       text: {
         fill: '#6a7c89',
@@ -147,13 +152,14 @@ const lightTheme: DefaultTheme = {
       outlineWidth: 2.5,
       outlineColor: '#ffffff',
       outlineOpacity: 0.35
-    } },
-    crosshair: {
-      line: {
-        strokeWidth: 1,
-        strokeDasharray: '1, 4'
-      }
+    }
   },
+  crosshair: {
+    line: {
+      strokeWidth: 1,
+      strokeDasharray: '1, 4'
+    }
+  }
 };
 
 const darkTheme: DefaultTheme = {
@@ -168,7 +174,7 @@ const darkTheme: DefaultTheme = {
     ticks: {
       line: {
         strokeWidth: 1,
-        stroke: '#526271'
+        stroke: '#52627155'
       },
       text: {
         fill: '#8d9cab',
@@ -185,7 +191,7 @@ const darkTheme: DefaultTheme = {
   },
   grid: {
     line: {
-      stroke: '#444'
+      stroke: '#52627155'
     }
   },
   legends: {
@@ -305,6 +311,31 @@ const config = {
     }
   }
 };
+
+export const epochColors = {
+      dark: [
+        '#3daff7',
+        '#f47560',
+        '#e8c1a0',
+        '#97e3d5',
+        '#ff66ff',
+        '#61cdbb',
+        '#3daff7',
+        '#d5a6ff',
+        '#f1e15b'
+      ],
+      light: [
+        '#1e88e5',
+        '#d32f2f',
+        '#f57c00',
+        '#00897b',
+        '#8e24aa',
+        '#00796b',
+        '#1976d2',
+        '#7b1fa2',
+        '#f9a825'
+      ]
+    };
 
 const theme = extendTheme(config);
 

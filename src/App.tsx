@@ -11,6 +11,7 @@ import {
   DrawerHeader,
   DrawerOverlay,
   HStack,
+  IconButton,
   Link,
   Skeleton,
   Text,
@@ -23,6 +24,8 @@ import { AnalysisFormData } from './calc.ts';
 import { useCallback, useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import LocalizedFormat from 'dayjs/plugin/localizedFormat';
+import timezone from 'dayjs/plugin/timezone';
+import utc from 'dayjs/plugin/utc';
 import { useColorMode } from '@chakra-ui/system';
 import { GitHub, Sliders } from 'react-feather';
 import { Header } from './sections/Header.tsx';
@@ -30,7 +33,10 @@ import PowerLawChart from './charts/PowerLaw.tsx';
 import { DailyPriceDatum } from './calc.ts';
 import { ChartSettings } from './charts/ChartControls.tsx';
 
+dayjs.extend(utc);
+dayjs.extend(timezone);
 dayjs.extend(LocalizedFormat);
+dayjs.tz.setDefault('America/Los_Angeles');
 
 const initialState: AnalysisFormData = {
   analysisStart: '2010-07-18',
@@ -128,6 +134,7 @@ function App() {
   }, [dailyPriceData, retryCount]);
 
   const [seriesToggled, setSeriesToggled] = useState(false);
+  const [mobileZoomPanMode, setMobileZoomPanMode] = useState(false);
 
   useEffect(() => {
     if (!dailyPriceData.length) return;
@@ -174,7 +181,7 @@ function App() {
       isOpen: isDrawerOpen,
       onOpen: setDrawerOpen,
       onClose: setDrawerClosed
-    } = useDisclosure({ defaultIsOpen: breakpointValue === 'base' });
+    } = useDisclosure();
 
     const onDateRangeAdjusted = useCallback(
       (startDate: string, endDate: string) => {
@@ -198,25 +205,56 @@ function App() {
       />
     );
 
+    const isMobile = useBreakpointValue({ base: true, md: false });
+
     return (
       <>
         <Header
         />
-        {dailyPriceData.length && breakpointValue === 'base' && (
-          <HStack justifyContent={'space-between'} w={'100%'} mt={'55px'}>
-            <Button onClick={setDrawerOpen} variant={'ghost'} alignSelf={'center'}>
-              <Icon as={Sliders} mr={1} /> Parameters
-            </Button>
-            <Drawer isOpen={isDrawerOpen} onClose={setDrawerClosed} placement="left">
-              <DrawerOverlay />
-              <DrawerContent>
-                <DrawerCloseButton />
-                <DrawerHeader>Adjustments</DrawerHeader>
-                <DrawerBody>{parametersSection}</DrawerBody>
-              </DrawerContent>
-            </Drawer>
-          </HStack>
-        )}
+        {dailyPriceData.length && isMobile && (
+          <>
+            <HStack justifyContent={'space-between'} w={'100%'} mt={'55px'}>
+                <Button onClick={setDrawerOpen} variant={'ghost'} alignSelf={'center'}>
+                  <Icon as={Sliders} mr={1} /> Parameters
+                </Button>
+                <IconButton
+                  aria-label={mobileZoomPanMode ? "Disable zoom/pan mode" : "Enable zoom/pan mode"}
+                  icon={
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      {mobileZoomPanMode ? (
+                        // Hand icon (pan mode active)
+                        <>
+                          <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v0" />
+                          <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v2" />
+                          <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8" />
+                          <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+                        </>
+                      ) : (
+                        // Crosshair icon (tooltip mode)
+                        <>
+                          <circle cx="12" cy="12" r="10" />
+                          <line x1="12" y1="8" x2="12" y2="16" />
+                          <line x1="8" y1="12" x2="16" y2="12" />
+                        </>
+                      )}
+                    </svg>
+                  }
+                  onClick={() => setMobileZoomPanMode(!mobileZoomPanMode)}
+                  size="sm"
+                  colorScheme={mobileZoomPanMode ? "orange" : "gray"}
+                  variant={mobileZoomPanMode ? "solid" : "outline"}
+                  mr={4}
+                />
+              </HStack>
+              <Drawer isOpen={isDrawerOpen} onClose={setDrawerClosed} placement="left">
+                <DrawerOverlay />
+                <DrawerContent>
+                  <DrawerCloseButton />
+                  <DrawerHeader>Adjustments</DrawerHeader>
+                  <DrawerBody>{parametersSection}</DrawerBody>
+                </DrawerContent>
+              </Drawer>
+          </>)}
           <HStack
             alignItems={'stretch'}
             justifyItems={'stretch'}
@@ -256,6 +294,7 @@ function App() {
                     onDateRangeAdjusted={onDateRangeAdjusted}
                     chartSettings={chartSettings}
                     shouldAnimate={initialLoad || seriesToggled}
+                    mobileZoomPanMode={mobileZoomPanMode}
                   />
                 }
                 

@@ -24,12 +24,11 @@
           content="BTC Charts is a collection of analytical tools to help you analyze and predict the future value of bitcoin."/>
     <meta name="twitter:image" content="https://btc-charts.vercel.app/preview.jpg"/>
     <style>
-      path {
+      path[data-type="line"] {
             stroke-dasharray: 5000;
             stroke-dashoffset: 5000;
             animation: dash 1.5s ease-in-out forwards;
       }
-
       @keyframes dash {
             to {
                   stroke-dashoffset: 0;

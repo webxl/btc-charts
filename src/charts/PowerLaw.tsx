@@ -1,21 +1,34 @@
 import { ResponsiveLine, SliceTooltipProps } from '@nivo/line';
-import { nivoThemes } from '../theme.ts';
+import { nivoThemes, epochColors } from '../theme.ts';
 import { useColorMode } from '@chakra-ui/system';
 import { Fragment, ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box } from '@chakra-ui/react';
 import dayjs from 'dayjs';
-import { generatePriceBands, AnalysisFormData, priceBandLabels, PriceBandTypes, DailyPriceDatum } from '../calc.ts';
-import { formatCurrency, formatCurrencyForAxis, formatCurrencyWithCents } from '../utils.ts';
+
+import {
+  generatePriceBands,
+  AnalysisFormData,
+  priceBandLabels,
+  PriceBandTypes,
+  DailyPriceDatum
+} from '../calc.ts';
+import {
+  formatCurrency,
+  formatCurrencyForAxis,
+  formatCurrencyWithCents,
+  convertToRomanNumeral
+} from '../utils.ts';
+import { bitcoinHalvingEpochs, powerLawColor, sigmaBandColor } from '../const.ts';
+
 import { linearGradientDef, Defs, useAnimatedPath, useMotionConfig } from '@nivo/core';
 import { area } from 'd3-shape';
 import { debounce } from 'lodash';
 
 import { ChartSettings } from './ChartControls';
 
-const powerLawColor = '#f47560';
-const sigmaBandColor = '#3daff7';
-
 import { useSpring, animated, to } from '@react-spring/web';
+
+type Datum = { x: number; y: number | null };
 
 const AreaPath = ({
   areaBlendMode,
@@ -42,7 +55,7 @@ const AreaPath = ({
   return (
     <animated.path
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-      d={to(animatedPath, (p) => p || '')} 
+      d={to(animatedPath, p => p || '')}
       fill={fill ? fill : animatedProps.color}
       fillOpacity={areaOpacity}
       strokeWidth={0}
@@ -53,22 +66,21 @@ const AreaPath = ({
   );
 };
 
-type Datum = { x: number; y: number | null };
-
 const PowerLawChart = ({
   dailyPriceData,
   parameters,
   onDateRangeAdjusted,
   chartSettings,
-  shouldAnimate = false
+  shouldAnimate = false,
+  mobileZoomPanMode = false
 }: {
   dailyPriceData: DailyPriceDatum[];
   parameters: AnalysisFormData;
   onDateRangeAdjusted: (startDate: string, endDate: string) => void;
   chartSettings: ChartSettings;
   shouldAnimate: boolean;
+  mobileZoomPanMode?: boolean;
 }) => {
-
   const { colorMode } = useColorMode();
 
   const _startDate = dayjs(parameters.analysisStart).toDate();
@@ -76,8 +88,20 @@ const PowerLawChart = ({
 
   const [startDate, setStartDate] = useState(_startDate);
   const [endDate, setEndDate] = useState(_endDate);
+  const startDateRef = useRef(startDate);
+  const endDateRef = useRef(endDate);
+  const onDateRangeAdjustedRef = useRef(onDateRangeAdjusted);
 
-  const getDaysFromStartDate = useCallback((curDate: Date) => dayjs(curDate).diff(startDate, 'day'), [startDate]);
+  useEffect(() => {
+    startDateRef.current = startDate;
+    endDateRef.current = endDate;
+    onDateRangeAdjustedRef.current = onDateRangeAdjusted;
+  }, [startDate, endDate, onDateRangeAdjusted]);
+
+  const getDaysFromStartDate = useCallback(
+    (curDate: Date) => dayjs(curDate).diff(startDate, 'day'),
+    [startDate]
+  );
 
   const genesis = useMemo(() => new Date(2009, 0, 3), []);
   const initialDaysSinceGenesis = -1 * getDaysFromStartDate(genesis);
@@ -87,48 +111,54 @@ const PowerLawChart = ({
   const [lowestPriceInData, setLowestPriceInData] = useState(Number.MAX_VALUE);
 
   const data = useMemo((): readonly { id: string; color: string; data: Datum[] }[] => {
-    const priceBands = generatePriceBands(startDate, endDate, dailyPriceData, chartSettings.useXLog, 800);
-    let highestPrice = 0;
-    let lowestPrice = Number.MAX_VALUE;
-    const data = (
-      Object.entries(priceBands)
-        .filter(([type]) => {
-          return (
-            (type === 'price' && chartSettings.showPricePlot) ||
-            (type === 'powerLaw' && chartSettings.showPowerLawPlot) ||
-            (type === 'posOneSigma' && chartSettings.showInnerBand) ||
-            (type === 'posTwoSigma' && chartSettings.showOuterBand) ||
-            (type === 'negOneSigma' && chartSettings.showInnerBand) ||
-            (type === 'negTwoSigma' && chartSettings.showOuterBand)
-          );
-        })
-        .map(([type, data]) => ({
-          id: type,
-          color:
-            type === PriceBandTypes.powerLaw as string
-              ? powerLawColor
-              : type === PriceBandTypes.price as string
-                ? '#77d926'
-                : 'transparent',
-          data: data
-            .map(d => {
-              highestPrice = Math.max(highestPrice, d.price);
-              if (d.price > 0) {
-                lowestPrice = Math.min(lowestPrice, d.price);
-              }
-              return chartSettings.useXLog
-                ? {
-                  x: initialDaysSinceGenesis + getDaysFromStartDate(new Date(d.date)),
-                  y: d.price <= 0 ? null : d.price
-                }
-                : {
-                  x: new Date(d.date).getTime(),
-                  y: d.price <= 0 ? null : d.price
-                }
-            })
-            .filter(d => !chartSettings.useYLog || (d.y !== null && d.y > 0)) 
-        }))
+    const priceBands = generatePriceBands(
+      startDate,
+      endDate,
+      dailyPriceData,
+      chartSettings.useXLog,
+      800
     );
+    
+    let highestPrice = 0, lowestPrice = Number.MAX_VALUE;
+
+    const data = Object.entries(priceBands)
+      .filter(([type]) => {
+        return (
+          (type === 'price' && chartSettings.showPricePlot) ||
+          (type === 'powerLaw' && chartSettings.showPowerLawPlot) ||
+          (type === 'posOneSigma' && chartSettings.showInnerBand) ||
+          (type === 'posTwoSigma' && chartSettings.showOuterBand) ||
+          (type === 'negOneSigma' && chartSettings.showInnerBand) ||
+          (type === 'negTwoSigma' && chartSettings.showOuterBand)
+        );
+      })
+      .map(([type, data]) => ({
+        id: type,
+        color:
+          type === (PriceBandTypes.powerLaw as string)
+            ? powerLawColor
+            : type === (PriceBandTypes.price as string)
+              ? '#77d926'
+              : 'transparent',
+        data: data
+          .map(d => {
+            highestPrice = Math.max(highestPrice, d.price);
+            if (d.price > 0) {
+              lowestPrice = Math.min(lowestPrice, d.price);
+            }
+            const date = dayjs(d.date).tz('America/Los_Angeles').toDate();
+            return chartSettings.useXLog
+              ? {
+                  x: initialDaysSinceGenesis + getDaysFromStartDate(date),
+                  y: d.price <= 0 ? null : d.price
+                }
+              : {
+                  x: date.getTime(),
+                  y: d.price <= 0 ? null : d.price
+                };
+          })
+          .filter(d => !chartSettings.useYLog || (d.y !== null && d.y > 0))
+      }));
     setHighestPriceInData(highestPrice);
     setLowestPriceInData(Math.max(lowestPrice, 0.01));
     return data;
@@ -164,10 +194,14 @@ const PowerLawChart = ({
       const xFormatted = slice.points[0].data.xFormatted;
       const seenLabels = new Set<PriceBandTypes>();
       const allYValuesUnder1000 = slice.points.every(p => p.data.y !== null && p.data.y < 1000);
+
+      if (mobileZoomPanMode) {
+        return null;
+      }
       return (
         <Box
           ref={tooltipRef}
-          background={colorMode === 'dark' ? '#1A202Ccc' : 'whiteAlpha.600'}
+          background={colorMode === 'dark' ? '#1A202CCC' : 'whiteAlpha.900'}
           padding="9px 12px"
           border="1px solid"
           borderColor={colorMode === 'dark' ? 'white.alpha.300' : 'black.alpha.300'}
@@ -179,7 +213,7 @@ const PowerLawChart = ({
             style={{
               display: 'flex',
               justifyContent: 'space-between',
-              marginBottom: '10px',
+              marginBottom: '10px'
             }}
           >
             {chartSettings.useXLog ? 'Day ' : ''} {xFormatted}
@@ -191,6 +225,7 @@ const PowerLawChart = ({
               >
                 {`${dayjs(genesis)
                   .add(Number(xFormatted), 'day')
+                  .tz('America/Los_Angeles')
                   .format('MMM D, YYYY')}`}
               </span>
             )}
@@ -200,7 +235,8 @@ const PowerLawChart = ({
             .filter((p: any) => p.data.xFormatted === xFormatted)
             .map((point: any): ReactElement | undefined => {
               const price = point.data.y as number;
-              if (seenLabels.has(point.seriesId as PriceBandTypes)) { // overlapping point fix
+              if (seenLabels.has(point.seriesId as PriceBandTypes)) {
+                // overlapping point fix
                 return undefined;
               }
               seenLabels.add(point.seriesId as PriceBandTypes);
@@ -247,28 +283,31 @@ const PowerLawChart = ({
         </Box>
       );
     },
-    [colorMode, genesis, chartSettings.useXLog]
+    [colorMode, genesis, chartSettings.useXLog, mobileZoomPanMode]
   );
 
+  // layers
   const AreaLayer = ({ series, xScale, yScale, innerHeight }: any) => {
     const getArea = (lowerBound: readonly any[], upperBound: readonly any[]) => {
       // Ensure both bounds have the same length and valid data
       if (!lowerBound || !upperBound || lowerBound.length === 0 || upperBound.length === 0) {
         return null;
       }
-      
+
       // Ensure both arrays have the same length by using the minimum length
       const minLength = Math.min(lowerBound.length, upperBound.length);
       const trimmedUpper = upperBound.slice(0, minLength);
       const trimmedLower = lowerBound.slice(0, minLength);
-      
+
       return area<any>()
         .defined((d: any, i: number) => {
           // Only draw area if both bounds have valid data at this index
-          return i < trimmedLower.length && 
-                 d.data.y !== null && 
-                 trimmedLower[i].data.y !== null &&
-                 (!chartSettings.useYLog || (d.data.y > 0 && trimmedLower[i].data.y > 0));
+          return (
+            i < trimmedLower.length &&
+            d.data.y !== null &&
+            trimmedLower[i].data.y !== null &&
+            (!chartSettings.useYLog || (d.data.y > 0 && trimmedLower[i].data.y > 0))
+          );
         })
         .x((d: any) => {
           const xVal = Number(d.data.x);
@@ -287,13 +326,21 @@ const PowerLawChart = ({
         })(trimmedUpper);
     };
 
-    const lowerOuterBound = (series as readonly any[]).find((s) => s.id === PriceBandTypes.negTwoSigma)?.data ?? [];
-    const upperOuterBound = (series as readonly any[]).find((s) => s.id === PriceBandTypes.posTwoSigma)?.data ?? [];
-    const lowerInnerBound = (series as readonly any[]).find((s) => s.id === PriceBandTypes.negOneSigma)?.data ?? [];
-    const upperInnerBound = (series as readonly any[]).find((s) => s.id === PriceBandTypes.posOneSigma)?.data ?? [];
+    const lowerOuterBound =
+      (series as readonly any[]).find(s => s.id === PriceBandTypes.negTwoSigma)?.data ?? [];
+    const upperOuterBound =
+      (series as readonly any[]).find(s => s.id === PriceBandTypes.posTwoSigma)?.data ?? [];
+    const lowerInnerBound =
+      (series as readonly any[]).find(s => s.id === PriceBandTypes.negOneSigma)?.data ?? [];
+    const upperInnerBound =
+      (series as readonly any[]).find(s => s.id === PriceBandTypes.posOneSigma)?.data ?? [];
 
-    const outerBand = chartSettings.showOuterBand ? getArea(lowerOuterBound, upperOuterBound) : null;
-    const innerBand = chartSettings.showInnerBand ? getArea(lowerInnerBound, upperInnerBound) : null;
+    const outerBand = chartSettings.showOuterBand
+      ? getArea(lowerOuterBound, upperOuterBound)
+      : null;
+    const innerBand = chartSettings.showInnerBand
+      ? getArea(lowerInnerBound, upperInnerBound)
+      : null;
 
     return (
       <>
@@ -341,45 +388,40 @@ const PowerLawChart = ({
     );
   };
 
-  const bitcoinHalvingEpochs = [
-    new Date('2009-01-03'),
-    new Date('2012-11-28'),
-    new Date('2016-07-08'),
-    new Date('2020-05-11'),
-    new Date('2024-04-19'),
-    new Date('2028-03-26'),
-    new Date('2032-02-22'),
-    new Date('2036-01-29'),
-    new Date('2040-01-06'),
-  ];
+  // Custom line layer that adds data-id attributes for CSS targeting
+  const CustomLineLayer = ({ series, lineGenerator, xScale, yScale }: any) => {
+    return (
+      <g>
+        {series.map((serie: any) => {
+          // Filter out invalid data points (null, undefined, NaN)
+          const validPoints = serie.data
+            .filter((d: any) => d.data.y !== null && d.data.y !== undefined && !isNaN(d.data.y))
+            .map((d: any) => ({
+              x: xScale(d.data.x),
+              y: yScale(d.data.y)
+            }));
 
-  const convertToRomanNumeral = (num: number) => {    
-    const romanNumerals = {
-      M: 1000,
-      CM: 900,
-      D: 500,
-      CD: 400,
-      C: 100,
-      XC: 90,
-      L: 50,
-      XL: 40,
-      X: 10,
-      IX: 9,
-      V: 5,
-      IV: 4,
-      I: 1
-    };
-    let roman = '';
-    for (let key of Object.keys(romanNumerals)) {
-      let matches = Math.floor(num / romanNumerals[key as keyof typeof romanNumerals]);
-      roman += key.repeat(matches);
-      num -= matches * romanNumerals[key as keyof typeof romanNumerals];
-    }
-    return roman;
+          // Skip rendering if no valid points
+          if (validPoints.length === 0) return null;
+
+          return (
+            <path
+              key={serie.id}
+              d={lineGenerator(validPoints)}
+              fill="none"
+              stroke={serie.color}
+              strokeWidth={serie.id === 'price' ? 2 : serie.id === 'powerLaw' ? 2 : 0}
+              data-id={serie.id}
+              data-type={'line'}
+              style={{ pointerEvents: 'none' }}
+            />
+          );
+        })}
+      </g>
+    );
   };
 
   const EpochLayer = ({ xScale, innerHeight }: any) => {
-    
     if (!chartSettings.showHalvingEpochs) return null;
 
     const areaGenerator = area()
@@ -387,104 +429,125 @@ const PowerLawChart = ({
       .y0(() => innerHeight)
       .y1(() => 0);
 
-    const epochColors = ['#3daff7', '#f47560', '#e8c1a0', '#97e3d5', '#ff66ff', '#61cdbb' ,'#3daff7', '#d5a6ff', '#f1e15b' ];
-
     const epochRanges = bitcoinHalvingEpochs.map((epoch: Date, index: number) => {
-      const start = chartSettings.useXLog 
+      const start = chartSettings.useXLog
         ? initialDaysSinceGenesis + getDaysFromStartDate(epoch)
         : epoch.getTime();
       const nextEpoch = bitcoinHalvingEpochs[index + 1];
-      const end = nextEpoch 
-        ? (chartSettings.useXLog 
-            ? initialDaysSinceGenesis + getDaysFromStartDate(nextEpoch)
-            : nextEpoch.getTime())
+      const end = nextEpoch
+        ? chartSettings.useXLog
+          ? initialDaysSinceGenesis + getDaysFromStartDate(nextEpoch)
+          : nextEpoch.getTime()
         : undefined;
-      return { start, end, color: epochColors[index % epochColors.length] };
+      return {
+        start,
+        end,
+        color: epochColors[colorMode][index % epochColors[colorMode].length]
+      };
     });
-  
+
     return (
       <>
         <Defs
-          defs={epochColors.map((color, index) => ({
+          defs={epochColors[colorMode].map((color, index) => ({
             id: `pattern-${index}`,
-            type: "patternLines",
-            background: "transparent",
+            type: 'patternLines',
+            background: 'transparent',
             color: color,
             lineWidth: 1,
             spacing: 6,
-            rotation: -45,
+            rotation: -45
           }))}
         />
-        
-        {epochRanges.map((range: { start: number; end: number | undefined; color: string }, index: number) => {
-          if (!range.end) return null;
 
-          if ((chartSettings.useXLog && range.end < initialDaysSinceGenesis) || (!chartSettings.useXLog && range.end < startDate.getTime())) return null;
-          
-          const nextEpoch = epochRanges[index + 1];
-          const epochData = [
-            {
-              data: {
-                x: chartSettings.useXLog ?  (index === 0 ? initialDaysSinceGenesis : Math.max(range.start, initialDaysSinceGenesis)) 
-                : (index === 0 ? startDate.getTime() : Math.max(range.start, startDate.getTime())),
-                y: 0
+        {epochRanges.map(
+          (range: { start: number; end: number | undefined; color: string }, index: number) => {
+            if (!range.end) return null;
+
+            if (
+              (chartSettings.useXLog && range.end < initialDaysSinceGenesis) ||
+              (!chartSettings.useXLog && range.end < startDate.getTime())
+            )
+              return null;
+
+            const nextEpoch = epochRanges[index + 1];
+            const epochData = [
+              {
+                data: {
+                  x: chartSettings.useXLog
+                    ? index === 0
+                      ? initialDaysSinceGenesis
+                      : Math.max(range.start, initialDaysSinceGenesis)
+                    : index === 0
+                      ? startDate.getTime()
+                      : Math.max(range.start, startDate.getTime()),
+                  y: 0
+                }
+              },
+              {
+                data: {
+                  x: !!nextEpoch ? nextEpoch.start - 2 : range.start,
+                  y: 0
+                }
               }
-            },
-            {
-              data: {
-                x: !!nextEpoch ? nextEpoch.start - 2 : range.start,
-                y: 0
+            ];
+
+            const fiveDays = 5 * 24 * 60 * 60 * 1000;
+            const getLabelX = () => {
+              if (chartSettings.useXLog) {
+                const x =
+                  range.start === 0
+                    ? xScale(initialDaysSinceGenesis + 3)
+                    : xScale(range.start + 20);
+
+                return Math.max(x, getDaysFromStartDate(startDate) + 2);
               }
-            }
-          ];
+              const x =
+                range.start === bitcoinHalvingEpochs[0].getTime()
+                  ? xScale(startDate.getTime() + fiveDays)
+                  : xScale(range.start + fiveDays);
+              return Math.max(x, xScale(startDate.getTime() + fiveDays));
+            };
 
-
-          const fiveDays = 5 * 24 * 60 * 60 * 1000;
-          const getLabelX = () => {
-            if (chartSettings.useXLog) {
-              const x = range.start === 0 ? xScale(initialDaysSinceGenesis + 3) : xScale(range.start + 20);
-              
-              return Math.max(x, getDaysFromStartDate(startDate) + 2) ;
-            }
-            const x = range.start === bitcoinHalvingEpochs[0].getTime() ? xScale(startDate.getTime() + fiveDays) : xScale(range.start + fiveDays);
-            return Math.max(x,  xScale(startDate.getTime() + fiveDays));
-          };
-
-          return (
-            <Fragment key={range.start}>
-              <path
-                d={areaGenerator(epochData as any) ?? undefined}
-                fill={`url(#pattern-${index})`}
-                fillOpacity={0.2}
-                stroke={range.color}
-                strokeWidth={1}
-              />
-              <rect
-                x={getLabelX()}
-                y={innerHeight - 18}
-                width={75}
-                height={16}
-                fill={colorMode === 'dark' ? '#1A202C' : '#fff'}
-                opacity={0.9}
-              />
-              <text
-                x={getLabelX() + 5}
-                y={innerHeight}
-                textAnchor="left"
-                dy={-6}
-                fill={range.color}
-                fontSize={12}
-                fontFamily={'courier'}
-              > Epoch {convertToRomanNumeral(index + 1)}{' '}
-                {/* { chartSettings.useXLog ? dayjs(genesis).add(range.start, 'day').format('YYYY-MM-DD') : dayjs(range.start).format('YYYY-MM-DD')} */}
-              </text>
-            </Fragment>
-          );
-        })}
+            return (
+              <Fragment key={range.start}>
+                <path
+                  d={areaGenerator(epochData as any) ?? undefined}
+                  fill={`url(#pattern-${index})`}
+                  fillOpacity={0.2}
+                  stroke={range.color}
+                  strokeWidth={1}
+                />
+                <rect
+                  x={getLabelX()}
+                  y={innerHeight - 18}
+                  width={75}
+                  height={16}
+                  fill={colorMode === 'dark' ? '#1A202C' : '#fff'}
+                  opacity={0.9}
+                />
+                <text
+                  x={getLabelX() + 5}
+                  y={innerHeight}
+                  textAnchor="left"
+                  dy={-6}
+                  fill={range.color}
+                  fontSize={12}
+                  fontFamily={'courier'}
+                >
+                  {' '}
+                  Epoch {convertToRomanNumeral(index + 1)}{' '}
+                  {/* { chartSettings.useXLog ? dayjs(genesis).add(range.start, 'day').format('YYYY-MM-DD') : dayjs(range.start).format('YYYY-MM-DD')} */}
+                </text>
+              </Fragment>
+            );
+          }
+        )}
       </>
     );
   };
 
+  // Scroll state
   const [isScrolling, setIsScrolling] = useState(false);
   const lastDeltaXRef = useRef<number | null>(null);
   const lastDeltaYRef = useRef<number | null>(null);
@@ -495,42 +558,60 @@ const PowerLawChart = ({
   const [dragEnd, setDragEnd] = useState<{ x: number; date: Date } | null>(null);
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
+  // Touch gesture state
+  const lastTouchDistanceRef = useRef<number | null>(null);
+  const lastTouchCenterRef = useRef<number | null>(null);
+  const lastAppliedDistanceRef = useRef<number | null>(null);
+  const lastAppliedCenterRef = useRef<number | null>(null);
+
   const debouncedZoomEnd = useMemo(
     () =>
       debounce(() => {
         setIsScrolling(false);
         lastDeltaXRef.current = null;
         lastDeltaYRef.current = null;
-      }, 250),
+        lastTouchDistanceRef.current = null;
+        lastTouchCenterRef.current = null;
+      }, 150),
     []
   );
 
   // Convert mouse X position to date
-  const mouseXToDate = useCallback((mouseX: number): Date => {
-    const container = chartContainerRef.current;
-    if (!container) return startDate;
-    
-    const rect = container.getBoundingClientRect();
-    const chartWidth = rect.width - 41; // Account for left margin (40px + 1px)
-    const relativeX = mouseX - rect.left - 40; // Subtract left margin
-    const normalizedX = Math.max(0, Math.min(1, relativeX / chartWidth));
-    
-    if (chartSettings.useXLog) {
-      const xRange = endDateDaysSinceGenesis - initialDaysSinceGenesis;
-      const daysSinceGenesis = initialDaysSinceGenesis + (normalizedX * xRange);
-      return dayjs(genesis).add(daysSinceGenesis, 'day').toDate();
-    } else {
-      const timeRange = endDate.getTime() - startDate.getTime();
-      const timestamp = startDate.getTime() + (normalizedX * timeRange);
-      return new Date(timestamp);
-    }
-  }, [startDate, endDate, chartSettings.useXLog, initialDaysSinceGenesis, endDateDaysSinceGenesis, genesis]);
+  const mouseXToDate = useCallback(
+    (mouseX: number): Date => {
+      const container = chartContainerRef.current;
+      if (!container) return startDate;
+
+      const rect = container.getBoundingClientRect();
+      const chartWidth = rect.width - 41; // Account for left margin (40px + 1px)
+      const relativeX = mouseX - rect.left - 40; // Subtract left margin
+      const normalizedX = Math.max(0, Math.min(1, relativeX / chartWidth));
+
+      if (chartSettings.useXLog) {
+        const xRange = endDateDaysSinceGenesis - initialDaysSinceGenesis;
+        const daysSinceGenesis = initialDaysSinceGenesis + normalizedX * xRange;
+        return dayjs(genesis).add(daysSinceGenesis, 'day').toDate();
+      } else {
+        const timeRange = endDate.getTime() - startDate.getTime();
+        const timestamp = startDate.getTime() + normalizedX * timeRange;
+        return new Date(timestamp);
+      }
+    },
+    [
+      startDate,
+      endDate,
+      chartSettings.useXLog,
+      initialDaysSinceGenesis,
+      endDateDaysSinceGenesis,
+      genesis
+    ]
+  );
 
   const handleScroll = useCallback(
     (e: WheelEvent) => {
       // Don't scroll if dragging
       if (isDragging) return;
-      
+
       e.preventDefault();
       e.stopPropagation();
 
@@ -596,37 +677,43 @@ const PowerLawChart = ({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Mouse event handlers for drag selection
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    // Only start drag on left mouse button
-    if (e.button !== 0) return;
-    
-    const date = mouseXToDate(e.clientX);
-    const container = chartContainerRef.current;
-    if (!container) return;
-    
-    const rect = container.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    
-    setIsDragging(true);
-    setDragStart({ x, date });
-    setDragEnd({ x, date });
-    
-    // Prevent text selection
-    e.preventDefault();
-  }, [mouseXToDate]);
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      // Only start drag on left mouse button
+      if (e.button !== 0) return;
 
-  const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!isDragging || !dragStart) return;
-    
-    const date = mouseXToDate(e.clientX);
-    const container = chartContainerRef.current;
-    if (!container) return;
-    
-    const rect = container.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    
-    setDragEnd({ x, date });
-  }, [isDragging, dragStart, mouseXToDate]);
+      const date = mouseXToDate(e.clientX);
+      const container = chartContainerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+
+      setIsDragging(true);
+      setDragStart({ x, date });
+      setDragEnd({ x, date });
+
+      // Prevent text selection
+      e.preventDefault();
+    },
+    [mouseXToDate]
+  );
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isDragging || !dragStart) return;
+
+      const date = mouseXToDate(e.clientX);
+      const container = chartContainerRef.current;
+      if (!container) return;
+
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+
+      setDragEnd({ x, date });
+    },
+    [isDragging, dragStart, mouseXToDate]
+  );
 
   const handleMouseUp = useCallback(() => {
     if (!isDragging || !dragStart || !dragEnd) {
@@ -635,11 +722,11 @@ const PowerLawChart = ({
       setDragEnd(null);
       return;
     }
-    
+
     // Determine start and end dates (handle dragging in either direction)
     const startDateForRange = dragStart.date < dragEnd.date ? dragStart.date : dragEnd.date;
     const endDateForRange = dragStart.date < dragEnd.date ? dragEnd.date : dragStart.date;
-    
+
     // Only update if there's a meaningful selection (more than 30 day difference)
     const daysDiff = Math.abs(dayjs(endDateForRange).diff(startDateForRange, 'day'));
     if (daysDiff > 30) {
@@ -650,7 +737,7 @@ const PowerLawChart = ({
         dayjs(endDateForRange).format('YYYY-MM-DD')
       );
     }
-    
+
     // Reset drag state
     setIsDragging(false);
     setDragStart(null);
@@ -664,23 +751,168 @@ const PowerLawChart = ({
         handleMouseUp();
       }
     };
-    
+
     document.addEventListener('mouseup', handleGlobalMouseUp);
     return () => document.removeEventListener('mouseup', handleGlobalMouseUp);
   }, [isDragging, handleMouseUp]);
+
+  const handleTouchStart = useCallback(
+    (e: TouchEvent) => {
+      if (!mobileZoomPanMode) return;
+
+      if (e.touches.length === 2) {
+        // Prevent default pinch-zoom behavior and stop propagation
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const distance = Math.hypot(
+          touch2.clientX - touch1.clientX,
+          touch2.clientY - touch1.clientY
+        );
+        const center = (touch1.clientX + touch2.clientX) / 2;
+        lastTouchDistanceRef.current = distance;
+        lastTouchCenterRef.current = center;
+        lastAppliedDistanceRef.current = distance;
+        lastAppliedCenterRef.current = center;
+      }
+    },
+    [mobileZoomPanMode]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: TouchEvent) => {
+      if (!mobileZoomPanMode) return;
+
+      if (
+        e.touches.length === 2 &&
+        lastTouchDistanceRef.current !== null &&
+        lastTouchCenterRef.current !== null
+      ) {
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+
+        const touch1 = e.touches[0];
+        const touch2 = e.touches[1];
+        const distance = Math.hypot(
+          touch2.clientX - touch1.clientX,
+          touch2.clientY - touch1.clientY
+        );
+        const center = (touch1.clientX + touch2.clientX) / 2;
+
+        setIsScrolling(true);
+
+        // Only update if there's significant movement (reduces jitter)
+        if (lastAppliedDistanceRef.current !== null && lastAppliedCenterRef.current !== null) {
+          const distanceChange = Math.abs(distance - lastAppliedDistanceRef.current);
+          const centerChange = Math.abs(center - lastAppliedCenterRef.current);
+          
+          // Require minimum movement to update
+          // Higher threshold for zoom (10px) to reduce jitter, lower for pan (5px)
+          const minDistanceChange = 10;
+          const minCenterChange = 5;
+          
+          if (distanceChange < minDistanceChange && centerChange < minCenterChange) {
+            lastTouchDistanceRef.current = distance;
+            lastTouchCenterRef.current = center;
+            return;
+          }
+        }
+
+        const lastDistance = lastAppliedDistanceRef.current || lastTouchDistanceRef.current!;
+        const lastCenter = lastAppliedCenterRef.current || lastTouchCenterRef.current!;
+
+        const currentStartDate = startDateRef.current;
+        const currentEndDate = endDateRef.current;
+        const dateRange = currentEndDate.getTime() - currentStartDate.getTime();
+
+        // Calculate zoom based on pinch distance ratio
+        const distanceRatio = distance / lastDistance;
+
+        // Calculate pan based on center movement
+        const actualCenterChange = center - lastCenter;
+
+        let newStartDate: Date, newEndDate: Date;
+
+        // Apply zoom based on pinch distance ratio
+        const midPoint = new Date(currentStartDate.getTime() + dateRange / 2);
+        // Dampen the zoom to make it less sensitive
+        const zoomAmount = (distanceRatio - 1) * 0.5; // Reduce sensitivity by 50%
+        const dampedRatio = 1 + zoomAmount;
+        const zoomFactor = 1 / dampedRatio;
+        const newRange = dateRange * zoomFactor;
+
+        newStartDate = new Date(midPoint.getTime() - newRange / 2);
+        newEndDate = new Date(midPoint.getTime() + newRange / 2);
+
+        // Apply panning based on center movement
+        const container = chartContainerRef.current;
+        if (container) {
+          const rect = container.getBoundingClientRect();
+          const chartWidth = rect.width - 41;
+          const panRatio = -actualCenterChange / chartWidth; // Negative for natural scrolling
+          const panAmount = newRange * panRatio; // Use newRange for consistent feel
+
+          newStartDate = new Date(newStartDate.getTime() + panAmount);
+          newEndDate = new Date(newEndDate.getTime() + panAmount);
+        }
+
+        // Prevent going before genesis
+        if (newStartDate <= new Date(2009, 1, 3)) {
+          debouncedZoomEnd();
+          return;
+        }
+
+        setStartDate(newStartDate);
+        setEndDate(newEndDate);
+        onDateRangeAdjustedRef.current(
+          dayjs(newStartDate).format('YYYY-MM-DD'),
+          dayjs(newEndDate).format('YYYY-MM-DD')
+        );
+
+        lastTouchDistanceRef.current = distance;
+        lastTouchCenterRef.current = center;
+        lastAppliedDistanceRef.current = distance;
+        lastAppliedCenterRef.current = center;
+        debouncedZoomEnd();
+      }
+    },
+    [debouncedZoomEnd, mobileZoomPanMode]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    lastTouchDistanceRef.current = null;
+    lastTouchCenterRef.current = null;
+    debouncedZoomEnd();
+  }, [debouncedZoomEnd]);
 
   useEffect(() => {
     const currentContainer = containerRef.current;
     if (currentContainer) {
       currentContainer.addEventListener('wheel', handleScroll, { passive: false });
+      // Use capture phase to intercept touch events before they reach the chart
+      currentContainer.addEventListener('touchstart', handleTouchStart, {
+        passive: false,
+        capture: true
+      });
+      currentContainer.addEventListener('touchmove', handleTouchMove, {
+        passive: false,
+        capture: true
+      });
+      currentContainer.addEventListener('touchend', handleTouchEnd, { capture: true });
     }
 
     return () => {
       if (currentContainer) {
         currentContainer.removeEventListener('wheel', handleScroll);
+        currentContainer.removeEventListener('touchstart', handleTouchStart, true);
+        currentContainer.removeEventListener('touchmove', handleTouchMove, true);
+        currentContainer.removeEventListener('touchend', handleTouchEnd, true);
       }
     };
-  }, [handleScroll]);
+  }, [handleScroll, handleTouchStart, handleTouchMove, handleTouchEnd]);
 
   useEffect(() => {
     if (isScrolling) return;
@@ -697,19 +929,22 @@ const PowerLawChart = ({
   useEffect(() => {
     let timeout: NodeJS.Timeout;
     if (tooltipRef.current) {
-      const shouldHide = isDragging || isScrolling;
-      timeout = setTimeout(() => {
-        if (tooltipRef.current) {
-          tooltipRef.current.style.opacity = shouldHide ? '0' : '1';
-        }
-      }, shouldHide ? 0 : 300);
+      const shouldHide = isDragging || isScrolling || mobileZoomPanMode;
+      timeout = setTimeout(
+        () => {
+          if (tooltipRef.current) {
+            tooltipRef.current.style.opacity = shouldHide ? '0' : '1';
+          }
+        },
+        shouldHide ? 0 : 300
+      );
     }
     return () => clearTimeout(timeout);
-  }, [isDragging, isScrolling]);
+  }, [isDragging, isScrolling, mobileZoomPanMode]);
 
   const middleLogValues = useMemo(() => {
     const values = [];
-    for (let i = 1; i < 10; i++) {
+    for (let i = 0; i < 10; i++) {
       const val = Math.pow(10, i);
       if (val > lowestPriceInData && val < highestPriceInData) {
         values.push(val);
@@ -718,10 +953,30 @@ const PowerLawChart = ({
     return values;
   }, [highestPriceInData, lowestPriceInData]);
 
+  const yAxisTickValues = useMemo(() => {
+    if (chartSettings.useYLog) {
+      const allValues = [lowestPriceInData, ...middleLogValues, highestPriceInData];
+
+      // Remove duplicates and values that are too close (within 20% of each other)
+      const filtered = allValues.filter((value, index) => {
+        if (index === 0) return true; // Always keep the first value
+
+        const prevValue = allValues[index - 1];
+        const ratio = value / prevValue;
+
+        // Keep values that are at least 2x different from the previous
+        return ratio >= 2;
+      });
+
+      return filtered;
+    }
+    return 5;
+  }, [chartSettings.useYLog, lowestPriceInData, middleLogValues, highestPriceInData]);
+
   // Selection overlay component
   const SelectionOverlay = () => {
     if (!isDragging || !dragStart || !dragEnd) return null;
-    
+
     const left = Math.min(dragStart.x, dragEnd.x);
     const width = Math.abs(dragEnd.x - dragStart.x);
     const startDateForRange = dragStart.date < dragEnd.date ? dragStart.date : dragEnd.date;
@@ -744,17 +999,18 @@ const PowerLawChart = ({
     );
   };
 
-  const plotLength = data[0]?.data.length;
-
   return (
     <Box
       height={'calc(100vh - 250px)'}
       minHeight={350}
-      style={{ 
-        touchAction: 'none', 
+      style={{
+        touchAction: 'none',
         overflow: 'visible',
         position: 'relative',
-        cursor: isDragging ? 'col-resize' : 'crosshair'
+        userSelect: 'none',
+        cursor: isDragging ? 'col-resize' : 'crosshair',
+        WebkitUserSelect: 'none',
+        WebkitTouchCallout: 'none'
       }}
       minW={0}
       width={'auto'}
@@ -763,10 +1019,13 @@ const PowerLawChart = ({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
     >
-      <div ref={chartContainerRef} style={{ position: 'relative', height: '100%', width: '100%' }}>
+      <div
+        ref={chartContainerRef}
+        style={{ position: 'relative', height: '100%', width: '100%' }}
+      >
         <SelectionOverlay />
         <ResponsiveLine
-          animate={shouldAnimate}
+          animate={shouldAnimate && !isScrolling}
           data={data}
           colors={{
             datum: 'color'
@@ -774,7 +1033,6 @@ const PowerLawChart = ({
           margin={{ top: 20, right: 1, bottom: 40, left: 40 }}
           // @ts-ignore
           theme={{ ...nivoThemes[colorMode], tooltip: { zIndex: 10000 } }}
-          crosshairType="x"
           xFormat={chartSettings.useXLog ? '.0f' : 'time:%b %d, %Y'}
           yFormat=" >-$,.0f"
           xScale={{
@@ -783,25 +1041,29 @@ const PowerLawChart = ({
             max: maxX,
             nice: false
           }}
-          gridXValues={[]}
           yScale={{
             type: chartSettings.useYLog ? 'log' : 'linear',
             min: minY,
             max: maxY,
             nice: false
           }}
-          gridYValues={chartSettings.useYLog ? [1, 1000, 1000000, 1000000000] : []}
           axisBottom={{
-            format: chartSettings.useXLog ? '.0f' : (d: Date) => plotLength > 60 ? dayjs(d).format('MMM YYYY') : dayjs(d).format('M/DD/YY'),
+            format: chartSettings.useXLog
+              ? '.0f'
+              : (d: Date) =>
+                  data[0]?.data.length > 60
+                    ? dayjs(d).format('MMM YYYY')
+                    : dayjs(d).format('M/DD/YY'),
             tickPadding: 5,
             tickRotation: -35,
             legendOffset: 0,
             legendPosition: 'middle'
           }}
+          gridYValues={yAxisTickValues}
           axisLeft={{
             format: (d: number) => formatCurrencyForAxis(d),
             tickPadding: 5,
-            tickValues: chartSettings.useYLog ? [lowestPriceInData, ...middleLogValues, highestPriceInData] : 5,
+            tickValues: yAxisTickValues,
             legendOffset: 0,
             legendPosition: 'middle'
           }}
@@ -811,8 +1073,9 @@ const PowerLawChart = ({
             from: 'color',
             modifiers: [['darker', 0.3]]
           }}
-          enableTouchCrosshair={!isDragging && !isScrolling}
-          enableSlices={isDragging || isScrolling ? false : "x"}
+          crosshairType="x"
+          enableTouchCrosshair={!isDragging && !isScrolling && !mobileZoomPanMode}
+          enableSlices={isDragging || isScrolling || mobileZoomPanMode ? false : 'x'}
           sliceTooltip={sliceTooltip}
           defs={[
             linearGradientDef('gradientA', [
@@ -828,7 +1091,7 @@ const PowerLawChart = ({
             AreaLayer,
             'axes',
             'crosshair',
-            'lines',
+            CustomLineLayer,
             EpochLayer,
             'markers',
             'legends',
