@@ -1,5 +1,5 @@
 import { area } from 'd3-shape';
-import React, { Fragment, useRef, useState, useEffect, useMemo } from 'react';
+import React, { Fragment, useRef, useState, useEffect } from 'react';
 import { type ChartSettings } from '../ChartControls.tsx';
 import { Defs, useAnimatedPath } from '@nivo/core';
 import { animated, to } from '@react-spring/web';
