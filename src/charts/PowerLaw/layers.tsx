@@ -20,7 +20,30 @@ const AreaPath = ({
   fill: string;
   path: string;
 }) => {
+  const [isFirstRender, setIsFirstRender] = React.useState(true);
+  
+  React.useEffect(() => {
+    // Disable animation on first render to prevent path interpolation issues
+    const timer = setTimeout(() => setIsFirstRender(false), 100);
+    return () => clearTimeout(timer);
+  }, []);
+  
   const animatedPath = useAnimatedPath(path);
+
+  // On first render, use the path directly without animation
+  if (isFirstRender) {
+    return (
+      <path
+        d={path}
+        fill={fill}
+        fillOpacity={areaOpacity}
+        strokeWidth={0}
+        style={{
+          mixBlendMode: areaBlendMode as React.CSSProperties['mixBlendMode']
+        }}
+      />
+    );
+  }
 
   return (
     <animated.path
@@ -36,7 +59,32 @@ const AreaPath = ({
 };
 
 const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: string }) => {
+  const [isFirstRender, setIsFirstRender] = React.useState(true);
+  
+  React.useEffect(() => {
+    // Disable animation on first render to prevent path interpolation issues
+    const timer = setTimeout(() => setIsFirstRender(false), 100);
+    return () => clearTimeout(timer);
+  }, []);
+  
   const animatedPath = useAnimatedPath(path);
+  
+  // On first render, use the path directly without animation to avoid interpolation glitches
+  if (isFirstRender) {
+    return (
+      <path
+        d={path}
+        fill="none"
+        stroke={series.color}
+        strokeWidth={series.id === 'price' || series.id === 'powerLaw' ? 2 : 0}
+        data-id={series.id}
+        data-type="line"
+        filter={series.id === 'price' ? 'url(#line-shadow)' : undefined}
+        style={{ pointerEvents: 'none' }}
+      />
+    );
+  }
+  
   return (
     <animated.path
       d={to(animatedPath, p => p || '')}
