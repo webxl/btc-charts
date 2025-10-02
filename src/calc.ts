@@ -151,7 +151,11 @@ export function generatePriceBands(
     if (firstPriceDate.isAfter(dayjs(lastDate)) && firstPriceDate.isBefore(currentDate))
       populateBands(firstPriceDate, firstPriceDate.diff(start, 'day'));
 
-    if (lastPriceDate.isAfter(dayjs(lastDate)) && (lastPriceDate.isBefore(currentDate) || lastPriceDate.isSame(currentDate))) { // did we skip it?
+    if (
+      lastPriceDate.isAfter(dayjs(lastDate)) &&
+      (lastPriceDate.isBefore(currentDate) || lastPriceDate.isSame(currentDate))
+    ) {
+      // did we skip it?
       populateBands(lastPriceDate, lastPriceDate.diff(start, 'day'), true);
       lastDate = currentDate;
       continue;

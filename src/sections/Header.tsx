@@ -23,7 +23,6 @@ export const Header = () => {
         {appName}
       </Heading>
       <HStack>
-
         <IconButton
           aria-label="Toggle Dark Mode"
           icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}

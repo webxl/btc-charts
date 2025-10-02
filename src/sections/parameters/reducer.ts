@@ -12,7 +12,15 @@ const parametersReducer = (
   state: reducerState,
   action: {
     type: string;
-    value?: string | number | Date | dayjs.Dayjs | null | boolean | AnalysisFormData | ChartSettings;
+    value?:
+      | string
+      | number
+      | Date
+      | dayjs.Dayjs
+      | null
+      | boolean
+      | AnalysisFormData
+      | ChartSettings;
     isDirty?: boolean;
     setOverride?: boolean;
   }

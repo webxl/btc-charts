@@ -313,29 +313,29 @@ const config = {
 };
 
 export const epochColors = {
-      dark: [
-        '#3daff7',
-        '#f47560',
-        '#e8c1a0',
-        '#97e3d5',
-        '#ff66ff',
-        '#61cdbb',
-        '#3daff7',
-        '#d5a6ff',
-        '#f1e15b'
-      ],
-      light: [
-        '#1e88e5',
-        '#d32f2f',
-        '#f57c00',
-        '#00897b',
-        '#8e24aa',
-        '#00796b',
-        '#1976d2',
-        '#7b1fa2',
-        '#f9a825'
-      ]
-    };
+  dark: [
+    '#3daff7',
+    '#f47560',
+    '#e8c1a0',
+    '#97e3d5',
+    '#ff66ff',
+    '#61cdbb',
+    '#3daff7',
+    '#d5a6ff',
+    '#f1e15b'
+  ],
+  light: [
+    '#1e88e5',
+    '#d32f2f',
+    '#f57c00',
+    '#00897b',
+    '#8e24aa',
+    '#00796b',
+    '#1976d2',
+    '#7b1fa2',
+    '#f9a825'
+  ]
+};
 
 const theme = extendTheme(config);
 

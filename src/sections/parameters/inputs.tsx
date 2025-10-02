@@ -207,7 +207,7 @@ const _Input = ({
       }
       const dayValue = dayjs(e.target.value);
       setExternallySetValue(e.target.value);
-       if (dayValue < dayjs(min) || dayValue > dayjs(max)) {
+      if (dayValue < dayjs(min) || dayValue > dayjs(max)) {
         e.preventDefault();
         return true;
       }
@@ -385,10 +385,14 @@ export const CheckboxInput = ({
   );
 };
 
-export const Label = (props: { label: string; tooltip?: ReactElement | string; isDisabled?: boolean }) => {
+export const Label = (props: {
+  label: string;
+  tooltip?: ReactElement | string;
+  isDisabled?: boolean;
+}) => {
   return (
     <FormLabel mr={0}>
-      <HStack >
+      <HStack>
         <Text
           color={props.isDisabled ? '#888' : 'inherit'}
           fontSize={'.9em'}

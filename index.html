@@ -1,43 +1,48 @@
 <!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8"/>
-    <link rel="icon" type="image/svg+xml" href="/favicon.png"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>BTC Charts</title>
-    <meta name="description"
-          content="BTC Charts is a collection of analytical tools to help you analyze and predict the future value of bitcoin."/>
-    <meta name="keywords"
-          content="bitcoin, charts, analytics, tools, future value, predictions"/>
-    <meta name="author" content="Matt Motherway"/>
+    <meta
+      name="description"
+      content="BTC Charts is a collection of analytical tools to help you analyze and predict the future value of bitcoin."
+    />
+    <meta name="keywords" content="bitcoin, charts, analytics, tools, future value, predictions" />
+    <meta name="author" content="Matt Motherway" />
 
-    <meta property="og:title" content="BTC Charts"/>
-    <meta property="og:description"
-          content="BTC Charts is a collection of analytical tools to help you analyze and predict the future value of bitcoin."/>
-    <meta property="og:image" content="https://btc-charts.vercel.app/preview.jpg"/>
-    <meta property="og:url" content="https://btc-charts.vercel.app/"/>
-    <meta property="og:type" content="website"/>
+    <meta property="og:title" content="BTC Charts" />
+    <meta
+      property="og:description"
+      content="BTC Charts is a collection of analytical tools to help you analyze and predict the future value of bitcoin."
+    />
+    <meta property="og:image" content="https://btc-charts.vercel.app/preview.jpg" />
+    <meta property="og:url" content="https://btc-charts.vercel.app/" />
+    <meta property="og:type" content="website" />
 
-    <meta name="twitter:card" content="summary_large_image"/>
-    <meta name="twitter:title" content="BTC Charts"/>
-    <meta name="twitter:description"
-          content="BTC Charts is a collection of analytical tools to help you analyze and predict the future value of bitcoin."/>
-    <meta name="twitter:image" content="https://btc-charts.vercel.app/preview.jpg"/>
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="BTC Charts" />
+    <meta
+      name="twitter:description"
+      content="BTC Charts is a collection of analytical tools to help you analyze and predict the future value of bitcoin."
+    />
+    <meta name="twitter:image" content="https://btc-charts.vercel.app/preview.jpg" />
     <style>
-      path[data-type="line"] {
-            stroke-dasharray: 5000;
-            stroke-dashoffset: 5000;
-            animation: dash 1.5s ease-in-out forwards;
+      path[data-type='line'] {
+        stroke-dasharray: 5000;
+        stroke-dashoffset: 5000;
+        animation: dash 1.5s ease-in-out forwards;
       }
       @keyframes dash {
-            to {
-                  stroke-dashoffset: 0;
-            }
+        to {
+          stroke-dashoffset: 0;
+        }
       }
     </style>
-</head>
-<body>
-<div id="root"></div>
-<script type="module" src="/src/main.tsx"></script>
-</body>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
 </html>
