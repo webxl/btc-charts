@@ -105,6 +105,8 @@ export function generatePriceBands(
     return (i / (numPoints - 1)) * days;
   };
 
+  if (!dailyPriceData.length) return priceBands;
+
   const lastPrice = dailyPriceData[dailyPriceData.length - 1];
   const firstPriceDate = dayjs(dailyPriceData[0].date);
   const lastPriceDate = dayjs(lastPrice.date);

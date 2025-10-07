@@ -6,8 +6,13 @@ import { useEffect, useState } from 'react';
 import { fetchLatestPrice } from '../fetch.ts';
 import { formatCurrency } from '../utils.ts';
 import { darkPriceColor } from '../const.ts';
+import { Download } from 'react-feather';
 
-export const Header = () => {
+interface HeaderProps {
+  onInstall?: () => void;
+}
+
+export const Header = ({ onInstall }: HeaderProps) => {
   const { colorMode, toggleColorMode } = useColorMode();
 
   const [latestPrice, setLatestPrice] = useState(0);
@@ -36,11 +41,20 @@ export const Header = () => {
       <Heading size={'lg'} as={'h1'} fontWeight={400}>
         {appName}
       </Heading>
-      <Box>
-        <Text color={colorMode === 'light' ? 'blue' : darkPriceColor} filter=
+      <Box> 
+        <Text color={colorMode === 'light' ? 'blue' : darkPriceColor} opacity={latestPrice === 0 ? 0 : 1} transition="opacity 0.5s ease-in-out" filter=
         {`drop-shadow(0px 0px ${colorMode === 'dark' ? ' 3px rgba(255, 255, 255, 0.6)':  ' 1px #66e264'})`}>{formatCurrency(latestPrice)}</Text>
+    
       </Box>
       <HStack>
+        {onInstall && (
+          <IconButton
+            aria-label="Add to Home Screen"
+            icon={<Download size={18} />}
+            onClick={onInstall}
+            variant={'ghost'}
+          />
+        )}
         <IconButton
           aria-label="Toggle Dark Mode"
           icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}

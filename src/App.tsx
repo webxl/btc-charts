@@ -13,7 +13,6 @@ import {
   HStack,
   IconButton,
   Link,
-  Skeleton,
   Text,
   useBreakpointValue,
   useDisclosure,
@@ -27,12 +26,13 @@ import LocalizedFormat from 'dayjs/plugin/localizedFormat';
 import timezone from 'dayjs/plugin/timezone';
 import utc from 'dayjs/plugin/utc';
 import { useColorMode } from '@chakra-ui/system';
-import { GitHub, Sliders } from 'react-feather';
+import { GitHub, Home, Sliders } from 'react-feather';
 import { Header } from './sections/Header.tsx';
 import PowerLawChart from './charts/PowerLaw';
 import { fetchData } from './fetch';
 import { DailyPriceDatum } from './calc.ts';
 import { ChartSettings } from './charts/ChartControls.tsx';
+import { appName } from './const.ts';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -82,11 +82,31 @@ function App() {
 
   const [retryCount, setRetryCount] = useState(5);
   const [initialLoad, setInitialLoad] = useState(true);
+  const [installPromptEvent, setInstallPromptEvent] = useState<any>(null);
+  
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
+  const isStandalone = (window.navigator as any).standalone === true || 
+                       window.matchMedia('(display-mode: standalone)').matches;
+  const showIOSInstall = isIOS && !isStandalone;
 
   useEffect(() => {
     fetchData(setdailyPriceData)
       .then(() => setIsLoading(false))
       .catch(e => console.error(e));
+  }, []);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      setInstallPromptEvent(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    };
   }, []);
 
   useEffect(() => {
@@ -164,6 +184,7 @@ function App() {
     [handleParameterUpdate]
   );
 
+
   const parametersSection = (
     <Parameters
       onChange={handleParameterUpdate}
@@ -178,10 +199,39 @@ function App() {
 
   const isMobile = useBreakpointValue({ base: true, md: false });
 
+  const addToHomeScreen = useCallback(async () => {
+    if (showIOSInstall) {
+      const shareData = {
+        title: appName,
+        url: window.location.href
+      };
+      if (navigator.share) {
+        try {
+          await navigator.share(shareData);
+        } catch (err) {
+          console.log('error', err)
+          if ((err as Error).name !== 'AbortError') {
+            alert('To add this app to your home screen:\n\n1. Tap the Share button (square with arrow)\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add"');
+          }
+        }
+      } else {
+        console.log('Share not supported');
+        alert('To add this app to your home screen:\n\n1. Tap the Share button (square with arrow)\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add"');
+      }
+      return;
+    }
+    
+    if (!installPromptEvent) return;
+    
+    await installPromptEvent.prompt();
+    
+    setInstallPromptEvent(null);
+  }, [installPromptEvent, showIOSInstall]);
+
   return (
     <>
-      <Header />
-      {dailyPriceData.length && isMobile && (
+      <Header onInstall={(installPromptEvent || showIOSInstall) ? addToHomeScreen : undefined} />
+      {isMobile && (
         <>
           <HStack justifyContent={'space-between'} w={'100%'} mt={'55px'}>
             <Button onClick={setDrawerOpen} variant={'ghost'} alignSelf={'center'}>
@@ -264,15 +314,7 @@ function App() {
           zIndex={1}
         >
           <VStack mt={0} px={2} pt={5} alignItems={'stretch'} zIndex={1} position={'relative'}>
-            {isLoading || dailyPriceData.length === 0 ? (
-              <Skeleton
-                speed={2}
-                height="100%"
-                width="100%"
-                alignSelf={'center'}
-                position={'absolute'}
-              />
-            ) : (
+
               <PowerLawChart
                 dailyPriceData={dailyPriceData}
                 parameters={parameters}
@@ -281,9 +323,13 @@ function App() {
                 shouldAnimate={initialLoad || seriesToggled}
                 mobileZoomPanMode={mobileZoomPanMode}
               />
-            )}
 
-            <VStack mt={14} w={'100%'} alignContent={'center'} gap={10}>
+            <VStack mt={4} w={'100%'} alignContent={'center'} gap={6}>
+              {isMobile && (installPromptEvent || showIOSInstall) && (
+                <Button onClick={addToHomeScreen} variant={'ghost'} alignSelf={'center'}>
+                  <Icon as={Home} mr={1} /> Add to Home Screen
+                </Button>
+              )}
               <Text fontSize={'xs'} maxW={760} textAlign={'center'} color={'gray.500'}>
                 This tool is for illustrative purposes only. It is not intended to provide
                 investment advice or financial planning services. The results are based on the

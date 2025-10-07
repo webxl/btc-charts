@@ -59,17 +59,37 @@ const AreaPath = ({
 
 const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: string }) => {
   const [isFirstRender, setIsFirstRender] = React.useState(true);
+  const pathRef = useRef<SVGPathElement>(null);
+  const [pathLength, setPathLength] = React.useState<number | null>(null);
+  const [shouldAnimate, setShouldAnimate] = React.useState(true);
+  
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
   React.useEffect(() => {
-    // Disable animation on first render to prevent path interpolation issues
-    const timer = setTimeout(() => setIsFirstRender(false), 100);
-    return () => clearTimeout(timer);
-  }, []);
+    if (isSafari) {
+      const timer = setTimeout(() => {
+        setShouldAnimate(false);
+        setIsFirstRender(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+    
+    if (pathRef.current && pathLength === null) {
+      const length = pathRef.current.getTotalLength();
+      setPathLength(length);
+      
+      const timer = setTimeout(() => {
+        setShouldAnimate(false);
+        setIsFirstRender(false);
+      }, 1600);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [pathLength, path, isSafari]);
 
   const animatedPath = useAnimatedPath(path);
 
-  // On first render, use the path directly without animation to avoid interpolation glitches
-  if (isFirstRender) {
+  if (isSafari && shouldAnimate) {
     return (
       <path
         d={path}
@@ -79,7 +99,47 @@ const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: st
         data-id={series.id}
         data-type="line"
         filter={series.id === 'price' ? 'url(#line-shadow)' : undefined}
-        style={{ pointerEvents: 'none' }}
+        style={{ 
+          pointerEvents: 'none',
+          opacity: 0,
+          animation: 'fadeIn 1.5s ease-in-out forwards'
+        }}
+      />
+    );
+  }
+
+  if (shouldAnimate && pathLength) {
+    return (
+      <path
+        ref={pathRef}
+        d={path}
+        fill="none"
+        stroke={series.color}
+        strokeWidth={series.id === 'price' || series.id === 'powerLaw' ? 2 : 0}
+        data-id={series.id}
+        data-type="line"
+        filter={series.id === 'price' ? 'url(#line-shadow)' : undefined}
+        style={{ 
+          pointerEvents: 'none',
+          strokeDasharray: String(pathLength), 
+          strokeDashoffset: String(pathLength),
+          animation: 'dash 1.5s ease-in-out forwards'
+        }}
+      />
+    );
+  }
+
+  if (isFirstRender && !isSafari) {
+    return (
+      <path
+        ref={pathRef}
+        d={path}
+        fill="none"
+        stroke={series.color}
+        strokeWidth={series.id === 'price' || series.id === 'powerLaw' ? 2 : 0}
+        data-id={series.id}
+        data-type="line"
+        style={{ pointerEvents: 'none', opacity: 0 }}
       />
     );
   }
@@ -124,7 +184,6 @@ export const useLayers = ({
         return null;
       }
 
-      // Ensure both arrays have the same length by using the minimum length
       const minLength = Math.min(lowerBound.length, upperBound.length);
       const trimmedUpper = upperBound.slice(0, minLength);
       const trimmedLower = lowerBound.slice(0, minLength);
@@ -211,9 +270,13 @@ export const useLayers = ({
     return (
       <g>
         {series.map((serie: any) => {
-          // Filter out invalid data points (null, undefined, NaN)
           const validPoints = serie.data
-            .filter((d: any) => d.data.y !== null && d.data.y !== undefined && !isNaN(d.data.y))
+            .filter((d: any) => {
+              const yVal = d.data.y;
+              if (yVal === null || yVal === undefined || isNaN(yVal)) return false;
+              if (chartSettings.useYLog && yVal <= 0) return false;
+              return true;
+            })
             .map((d: any) => ({
               x: xScale(d.data.x),
               y: yScale(d.data.y)

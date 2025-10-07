@@ -20,7 +20,7 @@ import {
   DailyPriceDatum
 } from '../../calc.ts';
 import { formatCurrency, formatCurrencyForAxis, formatCurrencyWithCents } from '../../utils.ts';
-import { powerLawColor, sigmaBandColor } from '../../const.ts';
+import { powerLawColor, sigmaBandColor, darkPriceColor } from '../../const.ts';
 
 import { linearGradientDef } from '@nivo/core';
 
@@ -105,7 +105,7 @@ const PowerLawChart = ({
             ? powerLawColor
             : type === (PriceBandTypes.price as string)
               ? colorMode === 'dark'
-                ? '#77d926'
+                ? darkPriceColor
                 : 'blue'
               : 'transparent',
         data: data
