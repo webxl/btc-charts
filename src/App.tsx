@@ -83,10 +83,11 @@ function App() {
   const [retryCount, setRetryCount] = useState(5);
   const [initialLoad, setInitialLoad] = useState(true);
   const [installPromptEvent, setInstallPromptEvent] = useState<any>(null);
-  
+
   const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-  const isStandalone = (window.navigator as any).standalone === true || 
-                       window.matchMedia('(display-mode: standalone)').matches;
+  const isStandalone =
+    (window.navigator as any).standalone === true ||
+    window.matchMedia('(display-mode: standalone)').matches;
   const showIOSInstall = isIOS && !isStandalone;
 
   useEffect(() => {
@@ -184,7 +185,6 @@ function App() {
     [handleParameterUpdate]
   );
 
-
   const parametersSection = (
     <Parameters
       onChange={handleParameterUpdate}
@@ -199,38 +199,14 @@ function App() {
 
   const isMobile = useBreakpointValue({ base: true, md: false });
 
-  const addToHomeScreen = useCallback(async () => {
-    if (showIOSInstall) {
-      const shareData = {
-        title: appName,
-        url: window.location.href
-      };
-      if (navigator.share) {
-        try {
-          await navigator.share(shareData);
-        } catch (err) {
-          console.log('error', err)
-          if ((err as Error).name !== 'AbortError') {
-            alert('To add this app to your home screen:\n\n1. Tap the Share button (square with arrow)\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add"');
-          }
-        }
-      } else {
-        console.log('Share not supported');
-        alert('To add this app to your home screen:\n\n1. Tap the Share button (square with arrow)\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add"');
-      }
-      return;
-    }
-    
-    if (!installPromptEvent) return;
-    
-    await installPromptEvent.prompt();
-    
-    setInstallPromptEvent(null);
-  }, [installPromptEvent, showIOSInstall]);
+  const addToHomeScreen = useCallback(() => {
+    // @ts-ignore
+    window.AddToHomeScreenInstance.show('en');
+  }, []);
 
   return (
     <>
-      <Header onInstall={(installPromptEvent || showIOSInstall) ? addToHomeScreen : undefined} />
+      <Header onInstall={addToHomeScreen} />
       {isMobile && (
         <>
           <HStack justifyContent={'space-between'} w={'100%'} mt={'55px'}>
@@ -314,15 +290,14 @@ function App() {
           zIndex={1}
         >
           <VStack mt={0} px={2} pt={5} alignItems={'stretch'} zIndex={1} position={'relative'}>
-
-              <PowerLawChart
-                dailyPriceData={dailyPriceData}
-                parameters={parameters}
-                onDateRangeAdjusted={onDateRangeAdjusted}
-                chartSettings={chartSettings}
-                shouldAnimate={initialLoad || seriesToggled}
-                mobileZoomPanMode={mobileZoomPanMode}
-              />
+            <PowerLawChart
+              dailyPriceData={dailyPriceData}
+              parameters={parameters}
+              onDateRangeAdjusted={onDateRangeAdjusted}
+              chartSettings={chartSettings}
+              shouldAnimate={initialLoad || seriesToggled}
+              mobileZoomPanMode={mobileZoomPanMode}
+            />
 
             <VStack mt={4} w={'100%'} alignContent={'center'} gap={6}>
               {isMobile && (installPromptEvent || showIOSInstall) && (

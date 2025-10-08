@@ -1,0 +1,15 @@
+{
+  "short_name": "BTC Charts",
+  "name": "BTC Charts",
+  "display": "standalone",
+  "id": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "apple-touch-icon.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

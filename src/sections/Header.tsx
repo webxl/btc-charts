@@ -10,9 +10,10 @@ import { Download } from 'react-feather';
 
 interface HeaderProps {
   onInstall?: () => void;
+  showIOSInstall?: boolean;
 }
 
-export const Header = ({ onInstall }: HeaderProps) => {
+export const Header = ({ onInstall, showIOSInstall }: HeaderProps) => {
   const { colorMode, toggleColorMode } = useColorMode();
 
   const [latestPrice, setLatestPrice] = useState(0);
@@ -41,13 +42,18 @@ export const Header = ({ onInstall }: HeaderProps) => {
       <Heading size={'lg'} as={'h1'} fontWeight={400}>
         {appName}
       </Heading>
-      <Box> 
-        <Text color={colorMode === 'light' ? 'blue' : darkPriceColor} opacity={latestPrice === 0 ? 0 : 1} transition="opacity 0.5s ease-in-out" filter=
-        {`drop-shadow(0px 0px ${colorMode === 'dark' ? ' 3px rgba(255, 255, 255, 0.6)':  ' 1px #66e264'})`}>{formatCurrency(latestPrice)}</Text>
-    
+      <Box>
+        <Text
+          color={colorMode === 'light' ? 'blue' : darkPriceColor}
+          opacity={latestPrice === 0 ? 0 : 1}
+          transition="opacity 0.5s ease-in-out"
+          filter={`drop-shadow(0px 0px ${colorMode === 'dark' ? ' 3px rgba(255, 255, 255, 0.6)' : ' 1px #66e264'})`}
+        >
+          {formatCurrency(latestPrice)}
+        </Text>
       </Box>
       <HStack>
-        {onInstall && (
+        {onInstall && showIOSInstall && (
           <IconButton
             aria-label="Add to Home Screen"
             icon={<Download size={18} />}

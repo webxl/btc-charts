@@ -28,6 +28,13 @@
       content="BTC Charts is a collection of analytical tools to help you analyze and predict the future value of bitcoin."
     />
     <meta name="twitter:image" content="https://btc-charts-lovat.vercel.app/preview.png" />
+    <link rel="manifest" crossorigin="use-credentials" href="manifest.json" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/gh/philfung/add-to-homescreen@3.4/dist/add-to-homescreen.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/gh/philfung/add-to-homescreen@3.4/dist/add-to-homescreen_en.min.js"></script>
+
     <style>
       @keyframes dash {
         to {
@@ -61,6 +68,21 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        window.AddToHomeScreenInstance = window.AddToHomeScreen({
+          appName: 'BTC Charts',
+
+          appNameDisplay: 'standalone',
+          appIconUrl: 'apple-touch-icon.png',
+          assetUrl: 'https://cdn.jsdelivr.net/gh/philfung/add-to-homescreen@3.4/dist/assets/img/',
+          maxModalDisplayCount: -1,
+          displayOptions: { showMobile: true, showDesktop: false },
+          allowClose: true,
+          showArrow: true
+        });
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

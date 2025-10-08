@@ -11,7 +11,8 @@ const colorMode = localStorage.getItem('chakra-ui-color-mode') || systemMode;
 const root = document.getElementById('root');
 
 ReactDOM.createRoot(root!).render(
-  <>{localStorage.setItem('chakra-ui-color-mode', colorMode)}
+  <>
+    {localStorage.setItem('chakra-ui-color-mode', colorMode)}
     <ChakraProvider theme={theme}>
       <App />
     </ChakraProvider>

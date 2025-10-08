@@ -62,7 +62,7 @@ const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: st
   const pathRef = useRef<SVGPathElement>(null);
   const [pathLength, setPathLength] = React.useState<number | null>(null);
   const [shouldAnimate, setShouldAnimate] = React.useState(true);
-  
+
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
   React.useEffect(() => {
@@ -73,16 +73,16 @@ const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: st
       }, 1500);
       return () => clearTimeout(timer);
     }
-    
+
     if (pathRef.current && pathLength === null) {
       const length = pathRef.current.getTotalLength();
       setPathLength(length);
-      
+
       const timer = setTimeout(() => {
         setShouldAnimate(false);
         setIsFirstRender(false);
       }, 1600);
-      
+
       return () => clearTimeout(timer);
     }
   }, [pathLength, path, isSafari]);
@@ -99,7 +99,7 @@ const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: st
         data-id={series.id}
         data-type="line"
         filter={series.id === 'price' ? 'url(#line-shadow)' : undefined}
-        style={{ 
+        style={{
           pointerEvents: 'none',
           opacity: 0,
           animation: 'fadeIn 1.5s ease-in-out forwards'
@@ -119,9 +119,9 @@ const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: st
         data-id={series.id}
         data-type="line"
         filter={series.id === 'price' ? 'url(#line-shadow)' : undefined}
-        style={{ 
+        style={{
           pointerEvents: 'none',
-          strokeDasharray: String(pathLength), 
+          strokeDasharray: String(pathLength),
           strokeDashoffset: String(pathLength),
           animation: 'dash 1.5s ease-in-out forwards'
         }}
@@ -244,7 +244,7 @@ export const useLayers = ({
             />
           </filter>
         </defs>
-      
+
         {chartSettings.showOuterBand && outerBand && (
           <AreaPath
             areaBlendMode={'normal'}

@@ -1,14 +1,7 @@
 import { ResponsiveLine, SliceTooltipProps } from '@nivo/line';
 import { nivoThemes } from '../../theme.ts';
 import { useColorMode } from '@chakra-ui/system';
-import {
-  ReactElement,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState
-} from 'react';
+import { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box } from '@chakra-ui/react';
 import dayjs from 'dayjs';
 
