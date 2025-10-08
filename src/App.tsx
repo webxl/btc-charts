@@ -32,7 +32,6 @@ import PowerLawChart from './charts/PowerLaw';
 import { fetchData } from './fetch';
 import { DailyPriceDatum } from './calc.ts';
 import { ChartSettings } from './charts/ChartControls.tsx';
-import { appName } from './const.ts';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -206,7 +205,7 @@ function App() {
 
   return (
     <>
-      <Header onInstall={addToHomeScreen} />
+      <Header onInstall={addToHomeScreen} showIOSInstall={showIOSInstall} />
       {isMobile && (
         <>
           <HStack justifyContent={'space-between'} w={'100%'} mt={'55px'}>
