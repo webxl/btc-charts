@@ -249,8 +249,8 @@ function App() {
             />
           </HStack>
           <Drawer isOpen={isDrawerOpen} onClose={setDrawerClosed} placement="left">
-            <DrawerOverlay />
-            <DrawerContent>
+            <DrawerOverlay bg="transparent" backdropFilter="blur(3px)" />
+            <DrawerContent bg={ colorMode === 'light' ? 'whiteAlpha.600' : 'blackAlpha.600'}>
               <DrawerCloseButton />
               <DrawerHeader>Adjustments</DrawerHeader>
               <DrawerBody>{parametersSection}</DrawerBody>

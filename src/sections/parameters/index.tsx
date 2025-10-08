@@ -1,4 +1,4 @@
-import { Button, Divider, VStack } from '@chakra-ui/react';
+import { Button, Divider, HStack, Icon, VStack } from '@chakra-ui/react';
 import { useCallback, useEffect, useReducer } from 'react';
 import { AnalysisFormData } from '../../calc.ts';
 import { DateInput } from './inputs.tsx';
@@ -6,6 +6,7 @@ import parametersReducer from './reducer.ts';
 import dayjs from 'dayjs';
 import { PeriodSelector } from './PeriodSelector.tsx';
 import ChartControls, { ChartSettings } from '../../charts/ChartControls.tsx';
+import { ChevronsLeft } from 'react-feather';
 
 const Parameters = ({
   isLoading,
@@ -117,13 +118,9 @@ const Parameters = ({
         dataStart={state.dataStart || '2010-07-18'}
         dataEnd={state.dataEnd || dayjs().format('YYYY-MM-DD')}
         isDisabled={isLoading}
+        onDrawerClose={onDrawerClose}
       />
 
-      {onDrawerClose && (
-        <Button onClick={onDrawerClose} aria-label={'Apply'} alignSelf={'center'}>
-          Apply
-        </Button>
-      )}
       <Divider my={4} />
       <ChartControls
         chartSettings={state.chartSettings}
@@ -131,10 +128,16 @@ const Parameters = ({
         isLoading={isLoading}
       />
       <Divider my={4} />
-
+      <HStack w={'100%'} justifyContent={'space-between'}>
       <Button variant={'link'} onClick={_resetToDefaults}>
         Reset to defaults
       </Button>
+      {onDrawerClose && (
+        <Button variant={'ghost'} onClick={onDrawerClose} aria-label={'Apply'} >
+          <Icon as={ChevronsLeft} /> Close 
+        </Button>
+        )}
+      </HStack>
     </VStack>
   );
 };

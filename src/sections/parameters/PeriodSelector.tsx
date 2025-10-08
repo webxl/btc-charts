@@ -2,6 +2,8 @@ import { Box, Button, Tooltip, HStack } from '@chakra-ui/react';
 import { useCallback, useState, useEffect } from 'react';
 import dayjs from 'dayjs';
 import { Label } from './inputs';
+import { Icon } from '@chakra-ui/icons';
+import { Check } from 'react-feather';
 
 export const PeriodSelector = ({
   onChange,
@@ -9,7 +11,8 @@ export const PeriodSelector = ({
   analysisEnd,
   dataStart,
   dataEnd,
-  isDisabled
+  isDisabled,
+  onDrawerClose
 }: {
   onChange: (period: number) => void;
   analysisStart: string;
@@ -17,6 +20,7 @@ export const PeriodSelector = ({
   dataStart?: string;
   dataEnd?: string;
   isDisabled: boolean;
+  onDrawerClose?: (() => void) | undefined;
 }) => {
   const maxPeriod = dayjs(dataEnd).diff(dataStart, 'year');
   const periods = [1, 5, 10, maxPeriod];
@@ -42,7 +46,7 @@ export const PeriodSelector = ({
   return (
     <Box>
       <Label label={'Period'} />
-      <HStack>
+      <HStack spacing={onDrawerClose ? 1 : 2}>
         {periods.map(period => (
           <Tooltip
             key={period}
@@ -63,6 +67,11 @@ export const PeriodSelector = ({
             </Button>
           </Tooltip>
         ))}
+        {onDrawerClose && (
+        <Button variant={'ghost'} onClick={onDrawerClose} aria-label={'Apply'} >
+          <Icon as={Check} />
+        </Button>
+        )}
       </HStack>
     </Box>
   );

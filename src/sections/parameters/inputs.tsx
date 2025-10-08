@@ -401,8 +401,8 @@ export const Label = (props: {
           {props.label}
         </Text>
         {props.tooltip && (
-          <Tooltip label={props.tooltip}>
-            <Icon as={Info} ml={1} mr={'6px'} color={'#888'} cursor={'help'} />
+          <Tooltip label={props.tooltip} shouldWrapChildren>
+            <Icon as={Info} ml={1} mr={'6px'} color={'#888'} cursor={'help'} pointerEvents="auto" />
           </Tooltip>
         )}
       </HStack>
