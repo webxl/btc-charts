@@ -163,17 +163,20 @@ export const useLayers = ({
   startDate,
   colorMode,
   initialDaysSinceGenesis,
-  getDaysFromStartDate
+  getDaysFromStartDate,
+  isLoading
 }: {
   chartSettings: ChartSettings;
   startDate: Date;
   colorMode: 'dark' | 'light';
   initialDaysSinceGenesis: number;
   getDaysFromStartDate: (date: Date) => number;
+  isLoading: boolean;
 }): {
   AreaLayer: React.FC<{ series: any; xScale: any; yScale: any; innerHeight: number }>;
   CustomLineLayer: React.FC<{ series: any; lineGenerator: any; xScale: any; yScale: any }>;
   EpochLayer: React.FC<{ xScale: any; innerHeight: number }>;
+  LoadingLayer: React.FC<{ innerWidth: number; innerHeight: number }>;
 } => {
   //   const genesis = useMemo(() => new Date(2009, 0, 3), []);
 
@@ -442,9 +445,36 @@ export const useLayers = ({
     );
   };
 
+  const LoadingLayer = ({ innerWidth, innerHeight }: { innerWidth: number; innerHeight: number }) => {
+    return isLoading ? (
+      <g>
+        <style>
+          {`
+            @keyframes pulse {
+              0%, 100% { opacity: 0.3; }
+              50% { opacity: 0.7; }
+            }
+          `}
+        </style>
+        <rect
+          x={0}
+          y={0}
+          width={innerWidth}
+          height={innerHeight}
+          fill={ colorMode === 'dark' ? '#1A202C' : '#fff'}
+          opacity={0.8}
+          style={{
+            animation: 'pulse 2s ease-in-out infinite'
+          }}
+        />
+      </g>
+    ) : null;
+  };
+
   return {
     AreaLayer,
     CustomLineLayer,
-    EpochLayer
+    EpochLayer,
+    LoadingLayer  
   };
 };

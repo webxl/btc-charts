@@ -1,4 +1,4 @@
-export const appName = 'BTC Charts';
+export const appName = '₿TC Charts';
 export const powerLawIntercept = 2.777e-17;
 export const powerLawSlope = 5.71;
 export const powerLawStdResiduals = 0.7305045048910941;

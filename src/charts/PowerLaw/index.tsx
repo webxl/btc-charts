@@ -30,7 +30,8 @@ const PowerLawChart = ({
   onDateRangeAdjusted,
   chartSettings,
   shouldAnimate = false,
-  mobileZoomPanMode = false
+  mobileZoomPanMode = false,
+  isLoading = false
 }: {
   dailyPriceData: DailyPriceDatum[];
   parameters: AnalysisFormData;
@@ -38,6 +39,7 @@ const PowerLawChart = ({
   chartSettings: ChartSettings;
   shouldAnimate: boolean;
   mobileZoomPanMode?: boolean;
+  isLoading?: boolean;
 }) => {
   const { colorMode } = useColorMode();
 
@@ -253,12 +255,13 @@ const PowerLawChart = ({
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
   // layers
-  const { AreaLayer, CustomLineLayer, EpochLayer } = useLayers({
+  const { AreaLayer, CustomLineLayer, EpochLayer, LoadingLayer } = useLayers({
     chartSettings,
     startDate,
     colorMode,
     initialDaysSinceGenesis,
-    getDaysFromStartDate
+    getDaysFromStartDate,
+    isLoading
   });
 
   // Convert mouse X position to date
@@ -526,6 +529,7 @@ const PowerLawChart = ({
             'markers',
             'legends',
             'slices',
+            LoadingLayer,
             'mesh'
           ]}
         />
