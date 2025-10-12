@@ -31,7 +31,8 @@ const PowerLawChart = ({
   chartSettings,
   shouldAnimate = false,
   mobileZoomPanMode = false,
-  isLoading = false
+  isLoading = false,
+  latestPrice
 }: {
   dailyPriceData: DailyPriceDatum[];
   parameters: AnalysisFormData;
@@ -40,6 +41,7 @@ const PowerLawChart = ({
   shouldAnimate: boolean;
   mobileZoomPanMode?: boolean;
   isLoading?: boolean;
+  latestPrice?: number;
 }) => {
   const { colorMode } = useColorMode();
 
@@ -75,6 +77,7 @@ const PowerLawChart = ({
       startDate,
       endDate,
       dailyPriceData,
+      latestPrice || 0,
       chartSettings.useXLog,
       800
     );
@@ -258,6 +261,7 @@ const PowerLawChart = ({
   const { AreaLayer, CustomLineLayer, EpochLayer, LoadingLayer } = useLayers({
     chartSettings,
     startDate,
+    endDate,
     colorMode,
     initialDaysSinceGenesis,
     getDaysFromStartDate,
@@ -523,7 +527,7 @@ const PowerLawChart = ({
             EpochLayer,
             'areas',
             AreaLayer,
-            'axes',
+            ...(isLoading || !highestPriceInData ? [] : ['axes' as any]),
             'crosshair',
             CustomLineLayer,
             'markers',

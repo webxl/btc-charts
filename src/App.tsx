@@ -32,6 +32,7 @@ import PowerLawChart from './charts/PowerLaw';
 import { fetchData } from './fetch';
 import { DailyPriceDatum } from './calc.ts';
 import { ChartSettings } from './charts/ChartControls.tsx';
+import { fetchLatestPrice } from './fetch.ts';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -203,9 +204,28 @@ function App() {
     window.AddToHomeScreenInstance.show('en');
   }, []);
 
+  const [latestPrice, setLatestPrice] = useState(0);
+
+  useEffect(() => {
+    fetchLatestPrice().then(setLatestPrice);
+    const interval = setInterval(() => {
+      fetchLatestPrice().then(setLatestPrice);
+    }, 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const onPriceClick = useCallback(() => {
+    const endDate = dayjs().add(3, 'month').toDate();
+    const startDate = dayjs().subtract(3, 'month').toDate();
+    handleParameterUpdate({
+      analysisStart: dayjs(startDate).format('YYYY-MM-DD'),
+      analysisEnd: dayjs(endDate).format('YYYY-MM-DD')
+    });
+  }, [parameters]);
+
   return (
     <>
-      <Header onInstall={addToHomeScreen} showIOSInstall={showIOSInstall} />
+      <Header onInstall={addToHomeScreen} onPriceClick={onPriceClick} showIOSInstall={showIOSInstall} isLoading={isLoading} latestPrice={latestPrice} showPowerLawDelta={chartSettings.showPowerLawPlot} />
       {isMobile && (
         <>
           <HStack justifyContent={'space-between'} w={'100%'} mt={'55px'}>
@@ -296,6 +316,8 @@ function App() {
               chartSettings={chartSettings}
               shouldAnimate={initialLoad || seriesToggled}
               mobileZoomPanMode={mobileZoomPanMode}
+              latestPrice={latestPrice}
+              isLoading={isLoading}
             />
 
             <VStack mt={4} w={'100%'} alignContent={'center'} gap={6}>

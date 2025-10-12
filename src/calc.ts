@@ -37,10 +37,17 @@ export const priceBandLabels: { [key in PriceBandTypes]: string } = {
   negTwoSigma: '-2σ'
 };
 
+export function getPowerLawDelta(price: number) {
+  const daysSinceGenesis = dayjs().diff('2009-01-03', 'day');
+  const powerLawPrice = powerLawIntercept * Math.pow(daysSinceGenesis, powerLawSlope);
+  return (price - powerLawPrice) / powerLawPrice;
+}
+
 export function generatePriceBands(
   startDate: Date,
   endDate: Date,
   dailyPriceData: DailyPriceDatum[],
+  latestPrice: number,
   useXLog: boolean,
   maxPoints: number
 ): PriceBands {
@@ -111,12 +118,12 @@ export function generatePriceBands(
   const firstPriceDate = dayjs(dailyPriceData[0].date);
   const lastPriceDate = dayjs(lastPrice.date);
 
-  function populateBands(currentDate: dayjs.Dayjs, xDays: number, isLastPrice: boolean = false) {
+  function populateBands(currentDate: dayjs.Dayjs, xDays: number, priceOverride?: number) {
     const dailyPriceIndex = currentDate.diff(firstPriceDate, 'day');
     const historicalPrice = dailyPriceData[dailyPriceIndex];
     priceBands.price.push({
       date: currentDate.format('YYYY-MM-DD'),
-      price: historicalPrice?.price || (isLastPrice ? lastPrice.price : 0)
+      price: historicalPrice?.price || (priceOverride ? priceOverride : 0)
     });
     priceBands.posTwoSigma.push({
       date: currentDate.format('YYYY-MM-DD'),
@@ -158,7 +165,7 @@ export function generatePriceBands(
       (lastPriceDate.isBefore(currentDate) || lastPriceDate.isSame(currentDate))
     ) {
       // did we skip it?
-      populateBands(lastPriceDate, lastPriceDate.diff(start, 'day'), true);
+      populateBands(lastPriceDate, lastPriceDate.diff(start, 'day'), lastPrice.price);
       lastDate = currentDate;
       continue;
     }
@@ -172,5 +179,16 @@ export function generatePriceBands(
 
     populateBands(currentDate, currentDate.diff(start, 'day'));
   }
+  const today = dayjs().subtract(1, 'day');
+
+  if (latestPrice && today.isBefore(end)) {
+    const idx = priceBands.price.findIndex(p => dayjs(p.date).isAfter(today));
+    if (idx !== -1) {
+      priceBands.price[idx].price = latestPrice;
+    } else {
+      populateBands(today, today.diff(start, 'day'), latestPrice);
+    }
+  }
+
   return priceBands;
 }

@@ -1,30 +1,23 @@
 import { useColorMode } from '@chakra-ui/system';
-import { Heading, HStack, IconButton, Box, Text } from '@chakra-ui/react';
-import { appName } from '../const.ts';
+import { Heading, HStack, IconButton, Box, Text, Spinner, Tooltip } from '@chakra-ui/react';
+import { appName, powerLawColor } from '../const.ts';
 import { MoonIcon, SunIcon } from '@chakra-ui/icons';
-import { useEffect, useState } from 'react';
-import { fetchLatestPrice } from '../fetch.ts';
-import { formatCurrency } from '../utils.ts';
+import { formatCurrency, formatPercentage } from '../utils.ts';
 import { darkPriceColor } from '../const.ts';
 import { Download } from 'react-feather';
+import { getPowerLawDelta } from '../calc.ts';
 
 interface HeaderProps {
   onInstall?: () => void;
+  onPriceClick?: () => void;
   showIOSInstall?: boolean;
+  isLoading?: boolean;
+  latestPrice?: number;
+  showPowerLawDelta?: boolean;
 }
 
-export const Header = ({ onInstall, showIOSInstall }: HeaderProps) => {
+export const Header = ({ onInstall, onPriceClick, showIOSInstall, isLoading, latestPrice, showPowerLawDelta }: HeaderProps) => {
   const { colorMode, toggleColorMode } = useColorMode();
-
-  const [latestPrice, setLatestPrice] = useState(0);
-
-  useEffect(() => {
-    fetchLatestPrice().then(setLatestPrice);
-    const interval = setInterval(() => {
-      fetchLatestPrice().then(setLatestPrice);
-    }, 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   return (
     <HStack
@@ -42,16 +35,31 @@ export const Header = ({ onInstall, showIOSInstall }: HeaderProps) => {
       <Heading size={'lg'} as={'h1'} fontWeight={400}>
         {appName}
       </Heading>
-      <Box>
-        <Text
-          color={colorMode === 'light' ? 'blue' : darkPriceColor}
-          opacity={latestPrice === 0 ? 0 : 1}
-          transition="opacity 0.5s ease-in-out"
+      <Tooltip label="Click to view latest price in chart">
+        <HStack onClick={onPriceClick} cursor="pointer">
+          <Text
+            color={colorMode === 'light' ? 'blue' : darkPriceColor}
+            opacity={latestPrice === 0 ? 0 : 1}
+            transition="opacity 0.5s ease-in-out"
           filter={`drop-shadow(0px 0px ${colorMode === 'dark' ? ' 3px rgba(255, 255, 255, 0.6)' : ' 1px #66e264'})`}
+          display='inline'
         >
-          {formatCurrency(latestPrice)}
+          {formatCurrency(latestPrice || 0)}
         </Text>
-      </Box>
+        {showPowerLawDelta && (
+          <Text
+            color={powerLawColor}
+            opacity={latestPrice === 0 ? 0 : 1}
+            transition="opacity 0.5s ease-in-out"
+            filter={`drop-shadow(0px 0px ${colorMode === 'dark' ? ' 3px rgba(255, 255, 255, 0.6)' : ' 0px black'})`}
+            display='inline'
+            fontSize={'xs'}
+          >
+            ({formatPercentage(getPowerLawDelta(latestPrice || 0))})
+          </Text>
+        )}
+      </HStack>
+      </Tooltip>
       <HStack>
         {onInstall && showIOSInstall && (
           <IconButton
@@ -61,6 +69,17 @@ export const Header = ({ onInstall, showIOSInstall }: HeaderProps) => {
             variant={'ghost'}
           />
         )}
+        <HStack>
+          {isLoading && (
+            <Spinner
+              size="sm"
+              color={colorMode === 'light' ? 'blue' : darkPriceColor}
+              speed="0.85s"
+              thickness="2px"
+              opacity={0.8}
+            />
+          )}
+        </HStack>
         <IconButton
           aria-label="Toggle Dark Mode"
           icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}

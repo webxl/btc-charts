@@ -63,6 +63,7 @@ const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: st
   const [pathLength, setPathLength] = React.useState<number | null>(null);
   const [shouldAnimate, setShouldAnimate] = React.useState(true);
 
+  // safari will animate segments of the plot no matter what
   const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
   React.useEffect(() => {
@@ -90,6 +91,7 @@ const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: st
   const animatedPath = useAnimatedPath(path);
 
   if (isSafari && shouldAnimate) {
+    // just fade in for safari
     return (
       <path
         d={path}
@@ -109,6 +111,7 @@ const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: st
   }
 
   if (shouldAnimate && pathLength) {
+    console.log('pathLength', Math.floor(pathLength));
     return (
       <path
         ref={pathRef}
@@ -121,9 +124,10 @@ const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: st
         filter={series.id === 'price' ? 'url(#line-shadow)' : undefined}
         style={{
           pointerEvents: 'none',
-          strokeDasharray: String(pathLength),
-          strokeDashoffset: String(pathLength),
+          strokeDasharray: String(Math.floor(pathLength) * 10),
+          strokeDashoffset: String(Math.floor(pathLength) * 10),
           animation: 'dash 1.5s ease-in-out forwards'
+
         }}
       />
     );
@@ -161,6 +165,7 @@ const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: st
 export const useLayers = ({
   chartSettings,
   startDate,
+  endDate,
   colorMode,
   initialDaysSinceGenesis,
   getDaysFromStartDate,
@@ -168,6 +173,7 @@ export const useLayers = ({
 }: {
   chartSettings: ChartSettings;
   startDate: Date;
+  endDate: Date;
   colorMode: 'dark' | 'light';
   initialDaysSinceGenesis: number;
   getDaysFromStartDate: (date: Date) => number;
@@ -297,6 +303,29 @@ export const useLayers = ({
     const prevShowHalvingEpochs = useRef(chartSettings.showHalvingEpochs);
     const [isAnimatingOut, setIsAnimatingOut] = useState(false);
 
+    // Calculate resolution-based offset for epoch boundaries
+    // This ensures epochs appear seamless across different scales
+    const getEpochBoundaryOffset = () => {
+      const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+      const maxPoints = 800; // Should match the value in PowerLawChart
+      
+      // Calculate the typical spacing between data points in days
+      const avgSpacingDays = days / maxPoints;
+      
+      if (chartSettings.useXLog) {
+        // For log scale (x is in days), we need overlap because we can't draw on half-days
+        // Return 0 so epochs share the boundary day (overlap by 1 day)
+        return 0;
+      } else {
+        // For linear scale (x is in milliseconds), use precise millisecond offset
+        // to prevent visual gaps while avoiding overlap
+        const offsetDays = Math.max(0.1, avgSpacingDays);
+        return offsetDays * 24 * 60 * 60 * 1000; // Convert to milliseconds
+      }
+    };
+
+    const epochBoundaryOffset = getEpochBoundaryOffset();
+
     useEffect(() => {
       if (prevShowHalvingEpochs.current && !chartSettings.showHalvingEpochs) {
         setIsAnimatingOut(true);
@@ -372,7 +401,7 @@ export const useLayers = ({
                 },
                 {
                   data: {
-                    x: !!nextEpoch ? nextEpoch.start - 2 : range.start,
+                    x: !!nextEpoch ? nextEpoch.start - epochBoundaryOffset : range.start,
                     y: 0
                   }
                 }
