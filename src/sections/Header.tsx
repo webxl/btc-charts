@@ -1,5 +1,5 @@
 import { useColorMode } from '@chakra-ui/system';
-import { Heading, HStack, IconButton, Box, Text, Spinner, Tooltip } from '@chakra-ui/react';
+import { Heading, HStack, IconButton, Text, Spinner, Tooltip } from '@chakra-ui/react';
 import { appName, powerLawColor } from '../const.ts';
 import { MoonIcon, SunIcon } from '@chakra-ui/icons';
 import { formatCurrency, formatPercentage } from '../utils.ts';
