@@ -32,7 +32,8 @@ const PowerLawChart = ({
   shouldAnimate = false,
   mobileZoomPanMode = false,
   isLoading = false,
-  latestPrice
+  latestPrice,
+  triggerBeacon
 }: {
   dailyPriceData: DailyPriceDatum[];
   parameters: AnalysisFormData;
@@ -42,6 +43,7 @@ const PowerLawChart = ({
   mobileZoomPanMode?: boolean;
   isLoading?: boolean;
   latestPrice?: number;
+  triggerBeacon?: number;
 }) => {
   const { colorMode } = useColorMode();
 
@@ -112,7 +114,7 @@ const PowerLawChart = ({
             if (d.price > 0) {
               lowestPrice = Math.min(lowestPrice, d.price);
             }
-            const date = dayjs(d.date).tz('America/Los_Angeles').toDate();
+            const date = dayjs(d.date).toDate();
             return chartSettings.useXLog
               ? {
                   x: initialDaysSinceGenesis + getDaysFromStartDate(date),
@@ -135,7 +137,8 @@ const PowerLawChart = ({
     getDaysFromStartDate,
     initialDaysSinceGenesis,
     startDate,
-    chartSettings
+    chartSettings,
+    latestPrice
   ]);
 
   const minX = useMemo(() => {
@@ -258,14 +261,16 @@ const PowerLawChart = ({
   const chartContainerRef = useRef<HTMLDivElement>(null);
 
   // layers
-  const { AreaLayer, CustomLineLayer, EpochLayer, LoadingLayer } = useLayers({
+  const { AreaLayer, CustomLineLayer, EpochLayer, BeaconLayer, LoadingLayer } = useLayers({
     chartSettings,
     startDate,
     endDate,
     colorMode,
     initialDaysSinceGenesis,
     getDaysFromStartDate,
-    isLoading
+    isLoading,
+    latestPrice,
+    triggerBeacon
   });
 
   // Convert mouse X position to date
@@ -530,6 +535,7 @@ const PowerLawChart = ({
             ...(isLoading || !highestPriceInData ? [] : ['axes' as any]),
             'crosshair',
             CustomLineLayer,
+            BeaconLayer,
             'markers',
             'legends',
             'slices',

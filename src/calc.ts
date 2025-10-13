@@ -114,9 +114,7 @@ export function generatePriceBands(
 
   if (!dailyPriceData.length) return priceBands;
 
-  const lastPrice = dailyPriceData[dailyPriceData.length - 1];
   const firstPriceDate = dayjs(dailyPriceData[0].date);
-  const lastPriceDate = dayjs(lastPrice.date);
 
   function populateBands(currentDate: dayjs.Dayjs, xDays: number, priceOverride?: number) {
     const dailyPriceIndex = currentDate.diff(firstPriceDate, 'day');
@@ -160,16 +158,6 @@ export function generatePriceBands(
     if (firstPriceDate.isAfter(dayjs(lastDate)) && firstPriceDate.isBefore(currentDate))
       populateBands(firstPriceDate, firstPriceDate.diff(start, 'day'));
 
-    if (
-      lastPriceDate.isAfter(dayjs(lastDate)) &&
-      (lastPriceDate.isBefore(currentDate) || lastPriceDate.isSame(currentDate))
-    ) {
-      // did we skip it?
-      populateBands(lastPriceDate, lastPriceDate.diff(start, 'day'), lastPrice.price);
-      lastDate = currentDate;
-      continue;
-    }
-
     lastDate = currentDate;
 
     // Ensure we don't exceed the end date
@@ -179,14 +167,17 @@ export function generatePriceBands(
 
     populateBands(currentDate, currentDate.diff(start, 'day'));
   }
-  const today = dayjs().subtract(1, 'day');
+  const today = dayjs().startOf('day');
 
-  if (latestPrice && today.isBefore(end)) {
-    const idx = priceBands.price.findIndex(p => dayjs(p.date).isAfter(today));
+  if (latestPrice && today.isBefore(end) && today.isAfter(start)) {
+    const idx = priceBands.price.findIndex(p => p.date === today.format('YYYY-MM-DD'));
     if (idx !== -1) {
       priceBands.price[idx].price = latestPrice;
     } else {
-      populateBands(today, today.diff(start, 'day'), latestPrice);
+      const xDays = today.diff(start, 'day');
+      if (xDays >= 0) {
+        populateBands(today, xDays, latestPrice);
+      }
     }
   }
 

@@ -73,6 +73,7 @@ function App() {
   });
   const { colorMode, toggleColorMode } = useColorMode();
   const [isLoading, setIsLoading] = useState(true);
+  const [beaconTrigger, setBeaconTrigger] = useState(0);
 
   useEffect(() => {
     if (colorMode === undefined) {
@@ -221,6 +222,7 @@ function App() {
       analysisStart: dayjs(startDate).format('YYYY-MM-DD'),
       analysisEnd: dayjs(endDate).format('YYYY-MM-DD')
     });
+    setBeaconTrigger(prev => prev + 1);
   }, [parameters]);
 
   return (
@@ -318,6 +320,7 @@ function App() {
               mobileZoomPanMode={mobileZoomPanMode}
               latestPrice={latestPrice}
               isLoading={isLoading}
+              triggerBeacon={beaconTrigger}
             />
 
             <VStack mt={4} w={'100%'} alignContent={'center'} gap={6}>

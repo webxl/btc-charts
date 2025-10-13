@@ -111,7 +111,6 @@ const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: st
   }
 
   if (shouldAnimate && pathLength) {
-    console.log('pathLength', Math.floor(pathLength));
     return (
       <path
         ref={pathRef}
@@ -169,7 +168,9 @@ export const useLayers = ({
   colorMode,
   initialDaysSinceGenesis,
   getDaysFromStartDate,
-  isLoading
+  isLoading,
+  latestPrice,
+  triggerBeacon
 }: {
   chartSettings: ChartSettings;
   startDate: Date;
@@ -178,10 +179,13 @@ export const useLayers = ({
   initialDaysSinceGenesis: number;
   getDaysFromStartDate: (date: Date) => number;
   isLoading: boolean;
+  latestPrice?: number;
+  triggerBeacon?: number;
 }): {
   AreaLayer: React.FC<{ series: any; xScale: any; yScale: any; innerHeight: number }>;
   CustomLineLayer: React.FC<{ series: any; lineGenerator: any; xScale: any; yScale: any }>;
   EpochLayer: React.FC<{ xScale: any; innerHeight: number }>;
+  BeaconLayer: React.FC<{ series: any; xScale: any; yScale: any }>;
   LoadingLayer: React.FC<{ innerWidth: number; innerHeight: number }>;
 } => {
   //   const genesis = useMemo(() => new Date(2009, 0, 3), []);
@@ -313,7 +317,7 @@ export const useLayers = ({
       const avgSpacingDays = days / maxPoints;
       
       if (chartSettings.useXLog) {
-        // For log scale (x is in days), we need overlap because we can't draw on half-days
+        // For log scale (x is in days), we need overlap because we can't draw on half-days using layers
         // Return 0 so epochs share the boundary day (overlap by 1 day)
         return 0;
       } else {
@@ -381,27 +385,41 @@ export const useLayers = ({
 
               if (
                 (chartSettings.useXLog && range.end < initialDaysSinceGenesis) ||
-                (!chartSettings.useXLog && range.end < startDate.getTime())
+                (!chartSettings.useXLog && range.end < startDate.getTime()) ||
+                (chartSettings.useXLog && range.start > initialDaysSinceGenesis + getDaysFromStartDate(endDate)) ||
+                (!chartSettings.useXLog && range.start > endDate.getTime())
               )
                 return null;
 
               const nextEpoch = epochRanges[index + 1];
+              const adjustedEpochEnd = chartSettings.useXLog
+                ? initialDaysSinceGenesis + getDaysFromStartDate(endDate)
+                : endDate.getTime();
+              const startX = chartSettings.useXLog
+                ? index === 0
+                  ? initialDaysSinceGenesis
+                  : Math.max(range.start, initialDaysSinceGenesis)
+                : index === 0
+                  ? startDate.getTime()
+                  : Math.max(range.start - epochBoundaryOffset, startDate.getTime());
+              
+              const endX = !!nextEpoch 
+                ? Math.min(nextEpoch.start - epochBoundaryOffset, adjustedEpochEnd) 
+                : adjustedEpochEnd;
+              
+              // Skip if start and end are the same (invalid area)
+              if (startX >= endX) return null;
+              
               const epochData = [
                 {
                   data: {
-                    x: chartSettings.useXLog
-                      ? index === 0
-                        ? initialDaysSinceGenesis
-                        : Math.max(range.start, initialDaysSinceGenesis)
-                      : index === 0
-                        ? startDate.getTime()
-                        : Math.max(range.start, startDate.getTime()),
+                    x: startX,
                     y: 0
                   }
                 },
                 {
                   data: {
-                    x: !!nextEpoch ? nextEpoch.start - epochBoundaryOffset : range.start,
+                    x: endX,
                     y: 0
                   }
                 }
@@ -474,6 +492,125 @@ export const useLayers = ({
     );
   };
 
+  const BeaconLayer = ({ series, xScale, yScale }: any) => {
+    const [showBeacon, setShowBeacon] = useState(false);
+    const prevLatestPrice = useRef(latestPrice);
+    const prevTrigger = useRef(triggerBeacon);
+
+    useEffect(() => {
+      // Trigger beacon animation when latestPrice changes
+      if (latestPrice && latestPrice !== prevLatestPrice.current && prevLatestPrice.current !== undefined) {
+        setShowBeacon(true);
+        const timeout = setTimeout(() => {
+          setShowBeacon(false);
+        }, 2000); // Animation duration
+        return () => clearTimeout(timeout);
+      }
+      prevLatestPrice.current = latestPrice;
+    }, [latestPrice]);
+
+    useEffect(() => {
+      // Trigger beacon animation manually via triggerBeacon prop
+      if (triggerBeacon !== undefined && triggerBeacon !== prevTrigger.current) {
+        setShowBeacon(true);
+        const timeout = setTimeout(() => {
+          setShowBeacon(false);
+        }, 2000); // Animation duration
+        prevTrigger.current = triggerBeacon;
+        return () => clearTimeout(timeout);
+      }
+    }, [triggerBeacon]);
+
+    if (!showBeacon || !latestPrice) return null;
+
+    // Find the price series to get the color and latest data point
+    const priceSeries = series.find((s: any) => s.id === 'price');
+    if (!priceSeries || !priceSeries.data || priceSeries.data.length === 0) return null;
+
+    const lastPoint = priceSeries.data[priceSeries.data.length - 1];
+    const x = xScale(lastPoint.data.x);
+    const y = yScale(lastPoint.data.y);
+    const color = priceSeries.color;
+
+    return (
+      <g style={{ pointerEvents: 'none' }}>
+        <style>
+          {`
+            @keyframes beacon-pulse {
+              0% {
+                r: 4;
+                opacity: 0.5;
+              }
+              100% {
+                r: 30;
+                opacity: 0;
+              }
+            }
+            @keyframes beacon-fade {
+              0% {
+                opacity: 0.9;
+              }
+              70% {
+                opacity: 0.9;
+              }
+              100% {
+                opacity: 0;
+              }
+            }
+          `}
+        </style>
+        {/* Three concentric circles with staggered animations */}
+        <circle
+          cx={x}
+          cy={y}
+          r={4}
+          fill="none"
+          stroke={color}
+          strokeWidth={2}
+          opacity={0.8}
+          style={{
+            animation: 'beacon-pulse 2s ease-out'
+          }}
+        />
+        <circle
+          cx={x}
+          cy={y}
+          r={4}
+          fill="none"
+          stroke={color}
+          strokeWidth={2}
+          opacity={0.8}
+          style={{
+            animation: 'beacon-pulse 2s ease-out 0.3s'
+          }}
+        />
+        <circle
+          cx={x}
+          cy={y}
+          r={4}
+          fill="none"
+          stroke={color}
+          strokeWidth={2}
+          opacity={0.8}
+          style={{
+            animation: 'beacon-pulse 2s ease-out 0.6s'
+          }}
+        />
+        {/* Center dot */}
+        <circle
+          cx={x}
+          cy={y}
+          r={2}
+          fill={color}
+          opacity={0.9}
+          style={{
+            animation: 'beacon-fade 2s ease-out'
+          }}
+        />
+      </g>
+    );
+  };
+
   const LoadingLayer = ({ innerWidth, innerHeight }: { innerWidth: number; innerHeight: number }) => {
     return isLoading ? (
       <g>
@@ -504,6 +641,7 @@ export const useLayers = ({
     AreaLayer,
     CustomLineLayer,
     EpochLayer,
+    BeaconLayer,
     LoadingLayer  
   };
 };

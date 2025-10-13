@@ -2,10 +2,11 @@ import { useColorMode } from '@chakra-ui/system';
 import { Heading, HStack, IconButton, Text, Spinner, Tooltip } from '@chakra-ui/react';
 import { appName, powerLawColor } from '../const.ts';
 import { MoonIcon, SunIcon } from '@chakra-ui/icons';
-import { formatCurrency, formatPercentage } from '../utils.ts';
+import { formatPercentage } from '../utils.ts';
 import { darkPriceColor } from '../const.ts';
 import { Download } from 'react-feather';
 import { getPowerLawDelta } from '../calc.ts';
+import { AnimatedPrice } from '../components/AnimatedPrice.tsx';
 
 interface HeaderProps {
   onInstall?: () => void;
@@ -27,25 +28,26 @@ export const Header = ({ onInstall, onPriceClick, showIOSInstall, isLoading, lat
       borderBottomColor={colorMode === 'dark' ? 'gray.600' : 'gray.200'}
       justifyContent={'space-between'}
       height={'50px'}
-      px={5}
+      px={4}
       position={'fixed'}
       top={0}
       zIndex={2}
     >
-      <Heading size={'lg'} as={'h1'} fontWeight={400}>
+      <Heading size={'lg'} as={'h1'} fontWeight={400} whiteSpace={'nowrap'}>
         {appName}
       </Heading>
       <Tooltip label="Click to view latest price in chart">
         <HStack onClick={onPriceClick} cursor="pointer">
-          <Text
+          <AnimatedPrice
+            price={latestPrice || 0}
             color={colorMode === 'light' ? 'blue' : darkPriceColor}
+            colorMode={colorMode}
             opacity={latestPrice === 0 ? 0 : 1}
             transition="opacity 0.5s ease-in-out"
-          filter={`drop-shadow(0px 0px ${colorMode === 'dark' ? ' 3px rgba(255, 255, 255, 0.6)' : ' 1px #66e264'})`}
-          display='inline'
-        >
-          {formatCurrency(latestPrice || 0)}
-        </Text>
+            filter={`drop-shadow(0px 0px ${colorMode === 'dark' ? ' 3px rgba(255, 255, 255, 0.6)' : ' 1px #66e264'})`}
+            display='inline'
+            showTestButton={true}
+          />
         {showPowerLawDelta && (
           <Text
             color={powerLawColor}
@@ -60,7 +62,7 @@ export const Header = ({ onInstall, onPriceClick, showIOSInstall, isLoading, lat
         )}
       </HStack>
       </Tooltip>
-      <HStack>
+      <HStack spacing={0}>
         {onInstall && showIOSInstall && (
           <IconButton
             aria-label="Add to Home Screen"
@@ -69,7 +71,6 @@ export const Header = ({ onInstall, onPriceClick, showIOSInstall, isLoading, lat
             variant={'ghost'}
           />
         )}
-        <HStack>
           {isLoading && (
             <Spinner
               size="sm"
@@ -79,7 +80,6 @@ export const Header = ({ onInstall, onPriceClick, showIOSInstall, isLoading, lat
               opacity={0.8}
             />
           )}
-        </HStack>
         <IconButton
           aria-label="Toggle Dark Mode"
           icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}
