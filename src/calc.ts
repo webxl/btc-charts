@@ -176,7 +176,30 @@ export function generatePriceBands(
     } else {
       const xDays = today.diff(start, 'day');
       if (xDays >= 0) {
-        populateBands(today, xDays, latestPrice);
+        const insertIndex = priceBands.price.findIndex(p => dayjs(p.date).isAfter(today));
+        const targetIndex = insertIndex === -1 ? priceBands.price.length : insertIndex;
+        const todayStr = today.format('YYYY-MM-DD');
+        priceBands.price.splice(targetIndex, 0, { date: todayStr, price: latestPrice });
+        priceBands.posTwoSigma.splice(targetIndex, 0, {
+          date: todayStr,
+          price: getSigma(xDays, 2)
+        });
+        priceBands.posOneSigma.splice(targetIndex, 0, {
+          date: todayStr,
+          price: getSigma(xDays, 1)
+        });
+        priceBands.powerLaw.splice(targetIndex, 0, {
+          date: todayStr,
+          price: getPowerLawPrice(xDays)
+        });
+        priceBands.negOneSigma.splice(targetIndex, 0, {
+          date: todayStr,
+          price: getSigma(xDays, -1)
+        });
+        priceBands.negTwoSigma.splice(targetIndex, 0, {
+          date: todayStr,
+          price: getSigma(xDays, -2)
+        });
       }
     }
   }

@@ -129,13 +129,13 @@ const Parameters = ({
       />
       <Divider my={4} />
       <HStack w={'100%'} justifyContent={'space-between'}>
-      <Button variant={'link'} onClick={_resetToDefaults}>
-        Reset to defaults
-      </Button>
-      {onDrawerClose && (
-        <Button variant={'ghost'} onClick={onDrawerClose} aria-label={'Apply'} >
-          <Icon as={ChevronsLeft} /> Close 
+        <Button variant={'link'} onClick={_resetToDefaults}>
+          Reset to defaults
         </Button>
+        {onDrawerClose && (
+          <Button variant={'ghost'} onClick={onDrawerClose} aria-label={'Apply'}>
+            <Icon as={ChevronsLeft} /> Close
+          </Button>
         )}
       </HStack>
     </VStack>

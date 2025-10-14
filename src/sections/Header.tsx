@@ -17,7 +17,14 @@ interface HeaderProps {
   showPowerLawDelta?: boolean;
 }
 
-export const Header = ({ onInstall, onPriceClick, showIOSInstall, isLoading, latestPrice, showPowerLawDelta }: HeaderProps) => {
+export const Header = ({
+  onInstall,
+  onPriceClick,
+  showIOSInstall,
+  isLoading,
+  latestPrice,
+  showPowerLawDelta
+}: HeaderProps) => {
   const { colorMode, toggleColorMode } = useColorMode();
 
   return (
@@ -45,22 +52,22 @@ export const Header = ({ onInstall, onPriceClick, showIOSInstall, isLoading, lat
             opacity={latestPrice === 0 ? 0 : 1}
             transition="opacity 0.5s ease-in-out"
             filter={`drop-shadow(0px 0px ${colorMode === 'dark' ? ' 3px rgba(255, 255, 255, 0.6)' : ' 1px #66e264'})`}
-            display='inline'
+            display="inline"
             showTestButton={true}
           />
-        {showPowerLawDelta && (
-          <Text
-            color={powerLawColor}
-            opacity={latestPrice === 0 ? 0 : 1}
-            transition="opacity 0.5s ease-in-out"
-            filter={`drop-shadow(0px 0px ${colorMode === 'dark' ? ' 3px rgba(255, 255, 255, 0.6)' : ' 0px black'})`}
-            display='inline'
-            fontSize={'xs'}
-          >
-            ({formatPercentage(getPowerLawDelta(latestPrice || 0))})
-          </Text>
-        )}
-      </HStack>
+          {showPowerLawDelta && (
+            <Text
+              color={powerLawColor}
+              opacity={latestPrice === 0 ? 0 : 1}
+              transition="opacity 0.5s ease-in-out"
+              filter={`drop-shadow(0px 0px ${colorMode === 'dark' ? ' 3px rgba(255, 255, 255, 0.6)' : ' 0px black'})`}
+              display="inline"
+              fontSize={'xs'}
+            >
+              ({formatPercentage(getPowerLawDelta(latestPrice || 0))})
+            </Text>
+          )}
+        </HStack>
       </Tooltip>
       <HStack spacing={0}>
         {onInstall && showIOSInstall && (
@@ -71,15 +78,15 @@ export const Header = ({ onInstall, onPriceClick, showIOSInstall, isLoading, lat
             variant={'ghost'}
           />
         )}
-          {isLoading && (
-            <Spinner
-              size="sm"
-              color={colorMode === 'light' ? 'blue' : darkPriceColor}
-              speed="0.85s"
-              thickness="2px"
-              opacity={0.8}
-            />
-          )}
+        {isLoading && (
+          <Spinner
+            size="sm"
+            color={colorMode === 'light' ? 'blue' : darkPriceColor}
+            speed="0.85s"
+            thickness="2px"
+            opacity={0.8}
+          />
+        )}
         <IconButton
           aria-label="Toggle Dark Mode"
           icon={colorMode === 'light' ? <MoonIcon /> : <SunIcon />}

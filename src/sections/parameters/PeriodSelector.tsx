@@ -68,9 +68,9 @@ export const PeriodSelector = ({
           </Tooltip>
         ))}
         {onDrawerClose && (
-        <Button variant={'ghost'} onClick={onDrawerClose} aria-label={'Apply'} >
-          <Icon as={Check} />
-        </Button>
+          <Button variant={'ghost'} onClick={onDrawerClose} aria-label={'Apply'}>
+            <Icon as={Check} />
+          </Button>
         )}
       </HStack>
     </Box>

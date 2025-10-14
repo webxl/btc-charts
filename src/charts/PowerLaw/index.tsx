@@ -4,6 +4,7 @@ import { useColorMode } from '@chakra-ui/system';
 import { ReactElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Box } from '@chakra-ui/react';
 import dayjs from 'dayjs';
+import * as scale from 'd3-scale';
 
 import {
   generatePriceBands,
@@ -419,6 +420,54 @@ const PowerLawChart = ({
     mobileZoomPanMode
   ]);
 
+  const xAxisTickValues = useMemo(() => {
+    let allValues: number[] = [];
+    if (chartSettings.useXLog) {
+      // get d3 x axis scale and get 6 values
+      const logXValues = scale.scaleLog().domain([minX, maxX]).ticks(6);
+      allValues = [minX, ...logXValues, maxX];
+    } else {
+      const linearXValues = scale.scaleLinear().domain([minX, maxX]).ticks(6);
+      allValues = [minX, ...linearXValues, maxX];
+    }
+    // Remove duplicates and values that are too close
+    // Use a percentage of the domain range to determine minimum spacing
+    const domainRange = maxX - minX;
+    const minSpacingPercent = 0.05; // 5% of domain range
+
+    const filtered: number[] = [];
+
+    for (let i = 0; i < allValues.length; i++) {
+      const value = allValues[i];
+
+      // Always keep the first value
+      if (i === 0) {
+        filtered.push(value);
+        continue;
+      }
+
+      // For the last value (maxX), always include it
+      if (i === allValues.length - 1) {
+        const lastFiltered = filtered[filtered.length - 1];
+        // If too close to the previous value, replace it instead of adding
+        if (value - lastFiltered < domainRange * minSpacingPercent) {
+          filtered[filtered.length - 1] = value;
+        } else {
+          filtered.push(value);
+        }
+        continue;
+      }
+
+      // For middle values, check spacing from previous filtered value
+      const lastFiltered = filtered[filtered.length - 1];
+      if (value - lastFiltered >= domainRange * minSpacingPercent) {
+        filtered.push(value);
+      }
+    }
+    // dedupe
+    return [...new Set(filtered)];
+  }, [minX, maxX, chartSettings.useXLog]);
+
   // Selection overlay component
   const SelectionOverlay = () => {
     if (!isDragging || !dragStart || !dragEnd) return null;
@@ -444,10 +493,10 @@ const PowerLawChart = ({
       />
     );
   };
-
+ 
   return (
     <Box
-      height={'calc(100vh - 250px)'}
+      height={'calc(100vh - 200px)'}
       minHeight={350}
       style={{
         touchAction: 'none',
@@ -499,8 +548,10 @@ const PowerLawChart = ({
             tickPadding: 5,
             tickRotation: -35,
             legendOffset: 0,
-            legendPosition: 'middle'
+            legendPosition: 'middle',
+            tickValues: xAxisTickValues
           }}
+          gridXValues={xAxisTickValues}
           gridYValues={yAxisTickValues}
           axisLeft={{
             format: (d: number) => formatCurrencyForAxis(d),

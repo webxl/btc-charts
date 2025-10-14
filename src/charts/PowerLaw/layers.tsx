@@ -126,7 +126,6 @@ const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: st
           strokeDasharray: String(Math.floor(pathLength) * 10),
           strokeDashoffset: String(Math.floor(pathLength) * 10),
           animation: 'dash 1.5s ease-in-out forwards'
-
         }}
       />
     );
@@ -312,10 +311,10 @@ export const useLayers = ({
     const getEpochBoundaryOffset = () => {
       const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
       const maxPoints = 800; // Should match the value in PowerLawChart
-      
+
       // Calculate the typical spacing between data points in days
       const avgSpacingDays = days / maxPoints;
-      
+
       if (chartSettings.useXLog) {
         // For log scale (x is in days), we need overlap because we can't draw on half-days using layers
         // Return 0 so epochs share the boundary day (overlap by 1 day)
@@ -386,7 +385,8 @@ export const useLayers = ({
               if (
                 (chartSettings.useXLog && range.end < initialDaysSinceGenesis) ||
                 (!chartSettings.useXLog && range.end < startDate.getTime()) ||
-                (chartSettings.useXLog && range.start > initialDaysSinceGenesis + getDaysFromStartDate(endDate)) ||
+                (chartSettings.useXLog &&
+                  range.start > initialDaysSinceGenesis + getDaysFromStartDate(endDate)) ||
                 (!chartSettings.useXLog && range.start > endDate.getTime())
               )
                 return null;
@@ -395,31 +395,24 @@ export const useLayers = ({
               const adjustedEpochEnd = chartSettings.useXLog
                 ? initialDaysSinceGenesis + getDaysFromStartDate(endDate)
                 : endDate.getTime();
-              const startX = chartSettings.useXLog
-                ? index === 0
-                  ? initialDaysSinceGenesis
-                  : Math.max(range.start, initialDaysSinceGenesis)
-                : index === 0
-                  ? startDate.getTime()
-                  : Math.max(range.start - epochBoundaryOffset, startDate.getTime());
-              
-              const endX = !!nextEpoch 
-                ? Math.min(nextEpoch.start - epochBoundaryOffset, adjustedEpochEnd) 
-                : adjustedEpochEnd;
-              
-              // Skip if start and end are the same (invalid area)
-              if (startX >= endX) return null;
-              
               const epochData = [
                 {
                   data: {
-                    x: startX,
+                    x: chartSettings.useXLog
+                      ? index === 0
+                        ? initialDaysSinceGenesis
+                        : Math.max(range.start, initialDaysSinceGenesis)
+                      : index === 0
+                        ? startDate.getTime()
+                        : Math.max(range.start - epochBoundaryOffset, startDate.getTime()),
                     y: 0
                   }
                 },
                 {
                   data: {
-                    x: endX,
+                    x: !!nextEpoch
+                      ? Math.min(nextEpoch.start - epochBoundaryOffset, adjustedEpochEnd)
+                      : range.start,
                     y: 0
                   }
                 }
@@ -499,7 +492,11 @@ export const useLayers = ({
 
     useEffect(() => {
       // Trigger beacon animation when latestPrice changes
-      if (latestPrice && latestPrice !== prevLatestPrice.current && prevLatestPrice.current !== undefined) {
+      if (
+        latestPrice &&
+        latestPrice !== prevLatestPrice.current &&
+        prevLatestPrice.current !== undefined
+      ) {
         setShowBeacon(true);
         const timeout = setTimeout(() => {
           setShowBeacon(false);
@@ -611,7 +608,13 @@ export const useLayers = ({
     );
   };
 
-  const LoadingLayer = ({ innerWidth, innerHeight }: { innerWidth: number; innerHeight: number }) => {
+  const LoadingLayer = ({
+    innerWidth,
+    innerHeight
+  }: {
+    innerWidth: number;
+    innerHeight: number;
+  }) => {
     return isLoading ? (
       <g>
         <style>
@@ -627,7 +630,7 @@ export const useLayers = ({
           y={0}
           width={innerWidth}
           height={innerHeight}
-          fill={ colorMode === 'dark' ? '#1A202C' : '#fff'}
+          fill={colorMode === 'dark' ? '#1A202C' : '#fff'}
           opacity={0.8}
           style={{
             animation: 'pulse 2s ease-in-out infinite'
@@ -642,6 +645,6 @@ export const useLayers = ({
     CustomLineLayer,
     EpochLayer,
     BeaconLayer,
-    LoadingLayer  
+    LoadingLayer
   };
 };

@@ -227,7 +227,14 @@ function App() {
 
   return (
     <>
-      <Header onInstall={addToHomeScreen} onPriceClick={onPriceClick} showIOSInstall={showIOSInstall} isLoading={isLoading} latestPrice={latestPrice} showPowerLawDelta={chartSettings.showPowerLawPlot} />
+      <Header
+        onInstall={addToHomeScreen}
+        onPriceClick={onPriceClick}
+        showIOSInstall={showIOSInstall}
+        isLoading={isLoading}
+        latestPrice={latestPrice}
+        showPowerLawDelta={chartSettings.showPowerLawPlot}
+      />
       {isMobile && (
         <>
           <HStack justifyContent={'space-between'} w={'100%'} mt={'55px'}>
@@ -272,7 +279,7 @@ function App() {
           </HStack>
           <Drawer isOpen={isDrawerOpen} onClose={setDrawerClosed} placement="left">
             <DrawerOverlay bg="transparent" backdropFilter="blur(3px)" />
-            <DrawerContent bg={ colorMode === 'light' ? 'whiteAlpha.600' : 'blackAlpha.600'}>
+            <DrawerContent bg={colorMode === 'light' ? 'whiteAlpha.600' : 'blackAlpha.600'}>
               <DrawerCloseButton />
               <DrawerHeader>Adjustments</DrawerHeader>
               <DrawerBody>{parametersSection}</DrawerBody>
