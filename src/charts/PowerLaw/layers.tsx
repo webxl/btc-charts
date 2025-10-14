@@ -524,7 +524,8 @@ export const useLayers = ({
     const priceSeries = series.find((s: any) => s.id === 'price');
     if (!priceSeries || !priceSeries.data || priceSeries.data.length === 0) return null;
 
-    const lastPoint = priceSeries.data[priceSeries.data.length - 1];
+    const priceData = priceSeries.data.filter((d: any) => d.data.y > 0);
+    const lastPoint = priceData[priceData.length - 1];
     const x = xScale(lastPoint.data.x);
     const y = yScale(lastPoint.data.y);
     const color = priceSeries.color;
