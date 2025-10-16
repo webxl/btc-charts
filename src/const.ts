@@ -2,6 +2,7 @@ export const appName = '₿TC Charts';
 export const powerLawIntercept = 2.777e-17;
 export const powerLawSlope = 5.71;
 export const powerLawStdResiduals = 0.7305045048910941;
+export const genesis = new Date(2009, 0, 3);
 
 export const bitcoinHalvingEpochs = [
   new Date('2009-01-03'),

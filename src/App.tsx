@@ -20,7 +20,7 @@ import {
 } from '@chakra-ui/react';
 import { Icon } from '@chakra-ui/icons';
 import { AnalysisFormData } from './calc.ts';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import dayjs from 'dayjs';
 import LocalizedFormat from 'dayjs/plugin/localizedFormat';
 import timezone from 'dayjs/plugin/timezone';
@@ -28,11 +28,13 @@ import utc from 'dayjs/plugin/utc';
 import { useColorMode } from '@chakra-ui/system';
 import { GitHub, Home, Sliders } from 'react-feather';
 import { Header } from './sections/Header.tsx';
-import PowerLawChart from './charts/PowerLaw';
+import PowerLawChart, { PowerLawChartRef } from './charts/PowerLaw';
 import { fetchData } from './fetch';
 import { DailyPriceDatum } from './calc.ts';
 import { ChartSettings } from './charts/ChartControls.tsx';
 import { fetchLatestPrice } from './fetch.ts';
+import download from 'downloadjs';
+import { toBlob } from 'html-to-image';
 
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -225,11 +227,50 @@ function App() {
     setBeaconTrigger(prev => prev + 1);
   }, [parameters]);
 
+  const chartRef = useRef<PowerLawChartRef | null>(null);
+  const chartContainerRef = useRef<HTMLDivElement | null>(null);
+  const [animationEnabled, setAnimationEnabled] = useState(true);
+
+  const onShare = useCallback(async () => {
+    if (!chartContainerRef.current) {
+      return;
+    }
+
+    // disable line animation
+    setAnimationEnabled(false);
+
+    await new Promise(resolve => setTimeout(resolve, 100));
+
+    chartRef.current?.showTooltipAtDate(dayjs().startOf('day').toDate());
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+    const blob = await toBlob(chartContainerRef.current, {
+      cacheBust: true,
+      pixelRatio: 1.5,
+      backgroundColor: colorMode === 'dark' ? '#1A202C' : '#FFFFFF',
+      filter: (node: HTMLElement) => {
+        // Exclude elements that might cause issues
+        return !node.classList?.contains('exclude-from-export');
+      }
+    });
+
+    if (blob) {
+      download(blob, 'chart.png', 'image/png');
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    chartRef.current?.hideCrosshairAndTooltip();
+
+    setAnimationEnabled(true);
+  }, [colorMode]);
+
   return (
     <>
       <Header
         onInstall={addToHomeScreen}
         onPriceClick={onPriceClick}
+        onShare={onShare}
         showIOSInstall={showIOSInstall}
         isLoading={isLoading}
         latestPrice={latestPrice}
@@ -318,17 +359,21 @@ function App() {
           zIndex={1}
         >
           <VStack mt={0} px={2} pt={5} alignItems={'stretch'} zIndex={1} position={'relative'}>
-            <PowerLawChart
-              dailyPriceData={dailyPriceData}
-              parameters={parameters}
-              onDateRangeAdjusted={onDateRangeAdjusted}
-              chartSettings={chartSettings}
-              shouldAnimate={initialLoad || seriesToggled}
-              mobileZoomPanMode={mobileZoomPanMode}
-              latestPrice={latestPrice}
-              isLoading={isLoading}
-              triggerBeacon={beaconTrigger}
-            />
+            <div ref={chartContainerRef}>
+              <PowerLawChart
+                dailyPriceData={dailyPriceData}
+                parameters={parameters}
+                onDateRangeAdjusted={onDateRangeAdjusted}
+                chartSettings={chartSettings}
+                shouldAnimate={initialLoad || seriesToggled}
+                mobileZoomPanMode={mobileZoomPanMode}
+                latestPrice={latestPrice}
+                isLoading={isLoading}
+                triggerBeacon={beaconTrigger}
+                ref={chartRef}
+                animationEnabled={animationEnabled}
+              />
+            </div>
 
             <VStack mt={4} w={'100%'} alignContent={'center'} gap={6}>
               {isMobile && (installPromptEvent || showIOSInstall) && (

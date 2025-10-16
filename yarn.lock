@@ -2753,6 +2753,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@types/downloadjs@npm:^1.4.6":
+  version: 1.4.6
+  resolution: "@types/downloadjs@npm:1.4.6"
+  checksum: 0e98425946c12315a7b9646edb75285bcc0fda2d59f9d296fa3bf9455ef62d6d73383c52ee86eec50e9b4cee6f9af9dba78c6fb56bc6444395b4ac4f76a86ec0
+  languageName: node
+  linkType: hard
+
 "@types/estree@npm:1.0.6":
   version: 1.0.6
   resolution: "@types/estree@npm:1.0.6"
@@ -3311,6 +3318,7 @@ __metadata:
     "@react-spring/web": ^9.7.4
     "@rollup/rollup-darwin-arm64": ^4.24.0
     "@types/d3-shape": ^3.1.6
+    "@types/downloadjs": ^1.4.6
     "@types/lodash": ^4.17.7
     "@types/node": ^22.5.4
     "@types/react": ^18.3.3
@@ -3322,12 +3330,14 @@ __metadata:
     "@vitejs/plugin-react-swc": ^3.7.0
     d3-shape: ^3.2.0
     dayjs: ^1.11.12
+    downloadjs: ^1.4.7
     eslint: ^8.57.0
     eslint-plugin-react: ^7.35.0
     eslint-plugin-react-hooks: ^4.6.2
     eslint-plugin-react-refresh: ^0.4.9
     eslint-plugin-unused-imports: ^4.1.3
     framer-motion: ^11.3.27
+    html-to-image: ^1.11.13
     lodash: ^4.17.21
     prettier: ^3.3.3
     react: ^18.3.1
@@ -3826,6 +3836,13 @@ __metadata:
   dependencies:
     esutils: "npm:^2.0.2"
   checksum: fd7673ca77fe26cd5cba38d816bc72d641f500f1f9b25b83e8ce28827fe2da7ad583a8da26ab6af85f834138cf8dae9f69b0cd6ab925f52ddab1754db44d99ce
+  languageName: node
+  linkType: hard
+
+"downloadjs@npm:^1.4.7":
+  version: 1.4.7
+  resolution: "downloadjs@npm:1.4.7"
+  checksum: 4c546a28e7adcb1c290685f923add84e89582549f93502fa1b028194492522f716abb95a70f6ae464067a767e967806970d2a03e6262f8ccbcf3dd68e950d1da
   languageName: node
   linkType: hard
 
@@ -4736,6 +4753,13 @@ __metadata:
   dependencies:
     react-is: "npm:^16.7.0"
   checksum: b1538270429b13901ee586aa44f4cc3ecd8831c061d06cb8322e50ea17b3f5ce4d0e2e66394761e6c8e152cd8c34fb3b4b690116c6ce2bd45b18c746516cb9e8
+  languageName: node
+  linkType: hard
+
+"html-to-image@npm:^1.11.13":
+  version: 1.11.13
+  resolution: "html-to-image@npm:1.11.13"
+  checksum: 18da77cf6c1e7f821f320dc6941642ee292df136f38c548ecb77aa04718b979df63ba4ea56e53d1939b9dbe8e23ca10c44b55319a885bfe7f5f5023c1b5698fe
   languageName: node
   linkType: hard
 

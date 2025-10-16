@@ -57,108 +57,118 @@ const AreaPath = ({
   );
 };
 
-const CustomAnimatedLine = React.memo(({ series, path }: { series: any; path: string }) => {
-  const [isFirstRender, setIsFirstRender] = React.useState(true);
-  const pathRef = useRef<SVGPathElement>(null);
-  const [pathLength, setPathLength] = React.useState<number | null>(null);
-  const [shouldAnimate, setShouldAnimate] = React.useState(true);
+const CustomAnimatedLine = React.memo(
+  ({
+    series,
+    path,
+    animationEnabled
+  }: {
+    series: any;
+    path: string;
+    animationEnabled: boolean;
+  }) => {
+    const [isFirstRender, setIsFirstRender] = React.useState(true);
+    const pathRef = useRef<SVGPathElement>(null);
+    const [pathLength, setPathLength] = React.useState<number | null>(null);
+    const [shouldAnimate, setShouldAnimate] = React.useState(true);
 
-  // safari will animate segments of the plot no matter what
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+    // safari will animate segments of the plot no matter what
+    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
 
-  React.useEffect(() => {
-    if (isSafari) {
-      const timer = setTimeout(() => {
-        setShouldAnimate(false);
-        setIsFirstRender(false);
-      }, 1500);
-      return () => clearTimeout(timer);
+    React.useEffect(() => {
+      if (isSafari) {
+        const timer = setTimeout(() => {
+          setShouldAnimate(false);
+          setIsFirstRender(false);
+        }, 1500);
+        return () => clearTimeout(timer);
+      }
+
+      if (pathRef.current && pathLength === null) {
+        const length = pathRef.current.getTotalLength();
+        setPathLength(length);
+
+        const timer = setTimeout(() => {
+          setShouldAnimate(false);
+          setIsFirstRender(false);
+        }, 1600);
+
+        return () => clearTimeout(timer);
+      }
+    }, [pathLength, path, isSafari]);
+
+    const animatedPath = useAnimatedPath(path);
+
+    if (isSafari && animationEnabled && shouldAnimate) {
+      // just fade in for safari
+      return (
+        <path
+          d={path}
+          fill="none"
+          stroke={series.color}
+          strokeWidth={series.id === 'price' || series.id === 'powerLaw' ? 2 : 0}
+          data-id={series.id}
+          data-type="line"
+          filter={series.id === 'price' ? 'url(#line-shadow)' : undefined}
+          style={{
+            pointerEvents: 'none',
+            opacity: 0,
+            animation: 'fadeIn 1.5s ease-in-out forwards'
+          }}
+        />
+      );
     }
 
-    if (pathRef.current && pathLength === null) {
-      const length = pathRef.current.getTotalLength();
-      setPathLength(length);
-
-      const timer = setTimeout(() => {
-        setShouldAnimate(false);
-        setIsFirstRender(false);
-      }, 1600);
-
-      return () => clearTimeout(timer);
+    if (animationEnabled && shouldAnimate && pathLength) {
+      return (
+        <path
+          ref={pathRef}
+          d={path}
+          fill="none"
+          stroke={series.color}
+          strokeWidth={series.id === 'price' || series.id === 'powerLaw' ? 2 : 0}
+          data-id={series.id}
+          data-type="line"
+          filter={series.id === 'price' ? 'url(#line-shadow)' : undefined}
+          style={{
+            pointerEvents: 'none',
+            strokeDasharray: String(Math.floor(pathLength) * 10),
+            strokeDashoffset: String(Math.floor(pathLength) * 10),
+            animation: 'dash 1.5s ease-in-out forwards'
+          }}
+        />
+      );
     }
-  }, [pathLength, path, isSafari]);
 
-  const animatedPath = useAnimatedPath(path);
+    if (isFirstRender && !isSafari) {
+      return (
+        <path
+          ref={pathRef}
+          d={path}
+          fill="none"
+          stroke={series.color}
+          strokeWidth={series.id === 'price' || series.id === 'powerLaw' ? 2 : 0}
+          data-id={series.id}
+          data-type="line"
+          style={{ pointerEvents: 'none', opacity: 1 }}
+        />
+      );
+    }
 
-  if (isSafari && shouldAnimate) {
-    // just fade in for safari
     return (
-      <path
-        d={path}
+      <animated.path
+        d={to(animatedPath, p => p || '')}
         fill="none"
         stroke={series.color}
         strokeWidth={series.id === 'price' || series.id === 'powerLaw' ? 2 : 0}
         data-id={series.id}
         data-type="line"
         filter={series.id === 'price' ? 'url(#line-shadow)' : undefined}
-        style={{
-          pointerEvents: 'none',
-          opacity: 0,
-          animation: 'fadeIn 1.5s ease-in-out forwards'
-        }}
+        style={{ pointerEvents: 'none' }}
       />
     );
   }
-
-  if (shouldAnimate && pathLength) {
-    return (
-      <path
-        ref={pathRef}
-        d={path}
-        fill="none"
-        stroke={series.color}
-        strokeWidth={series.id === 'price' || series.id === 'powerLaw' ? 2 : 0}
-        data-id={series.id}
-        data-type="line"
-        filter={series.id === 'price' ? 'url(#line-shadow)' : undefined}
-        style={{
-          pointerEvents: 'none',
-          strokeDasharray: String(Math.floor(pathLength) * 10),
-          strokeDashoffset: String(Math.floor(pathLength) * 10),
-          animation: 'dash 1.5s ease-in-out forwards'
-        }}
-      />
-    );
-  }
-
-  if (isFirstRender && !isSafari) {
-    return (
-      <path
-        ref={pathRef}
-        d={path}
-        fill="none"
-        stroke={series.color}
-        strokeWidth={series.id === 'price' || series.id === 'powerLaw' ? 2 : 0}
-        data-id={series.id}
-        data-type="line"
-        style={{ pointerEvents: 'none', opacity: 0 }}
-      />
-    );
-  }
-
-  return (
-    <animated.path
-      d={to(animatedPath, p => p || '')}
-      fill="none"
-      stroke={series.color}
-      strokeWidth={series.id === 'price' || series.id === 'powerLaw' ? 2 : 0}
-      data-id={series.id}
-      data-type="line"
-      filter={series.id === 'price' ? 'url(#line-shadow)' : undefined}
-      style={{ pointerEvents: 'none' }}
-    />
-  );
-});
+);
 
 export const useLayers = ({
   chartSettings,
@@ -169,7 +179,8 @@ export const useLayers = ({
   getDaysFromStartDate,
   isLoading,
   latestPrice,
-  triggerBeacon
+  triggerBeacon,
+  animationEnabled
 }: {
   chartSettings: ChartSettings;
   startDate: Date;
@@ -180,6 +191,7 @@ export const useLayers = ({
   isLoading: boolean;
   latestPrice?: number;
   triggerBeacon?: number;
+  animationEnabled?: boolean;
 }): {
   AreaLayer: React.FC<{ series: any; xScale: any; yScale: any; innerHeight: number }>;
   CustomLineLayer: React.FC<{ series: any; lineGenerator: any; xScale: any; yScale: any }>;
@@ -296,7 +308,14 @@ export const useLayers = ({
           if (validPoints.length === 0) return null;
 
           const path = lineGenerator(validPoints);
-          return <CustomAnimatedLine key={serie.id} series={serie} path={path} />;
+          return (
+            <CustomAnimatedLine
+              key={serie.id}
+              series={serie}
+              path={path}
+              animationEnabled={!!animationEnabled}
+            />
+          );
         })}
       </g>
     );

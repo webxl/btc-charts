@@ -4,13 +4,14 @@ import { appName, powerLawColor } from '../const.ts';
 import { MoonIcon, SunIcon } from '@chakra-ui/icons';
 import { formatPercentage } from '../utils.ts';
 import { darkPriceColor } from '../const.ts';
-import { Download } from 'react-feather';
+import { Download, Share } from 'react-feather';
 import { getPowerLawDelta } from '../calc.ts';
 import { AnimatedPrice } from '../components/AnimatedPrice.tsx';
 
 interface HeaderProps {
   onInstall?: () => void;
   onPriceClick?: () => void;
+  onShare?: () => void;
   showIOSInstall?: boolean;
   isLoading?: boolean;
   latestPrice?: number;
@@ -20,6 +21,7 @@ interface HeaderProps {
 export const Header = ({
   onInstall,
   onPriceClick,
+  onShare,
   showIOSInstall,
   isLoading,
   latestPrice,
@@ -70,11 +72,18 @@ export const Header = ({
         </HStack>
       </Tooltip>
       <HStack spacing={0}>
-        {onInstall && showIOSInstall && (
+        {onInstall && showIOSInstall ? (
           <IconButton
             aria-label="Add to Home Screen"
             icon={<Download size={18} />}
             onClick={onInstall}
+            variant={'ghost'}
+          />
+        ) : (
+          <IconButton
+            aria-label="Share"
+            icon={<Share size={18} />}
+            onClick={onShare}
             variant={'ghost'}
           />
         )}
